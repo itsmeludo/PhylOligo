@@ -14,6 +14,7 @@ library(ape)
 library(getopt) #install.packages("getopt")   #maybe launch it as admin or root if you want it for other users too.
 # ### phyloligo.py in the exec PATH 
 ### EMBOSS in the exec PATH 
+### samtools in the exec PATH 
 
 
 spec <- matrix(c(
@@ -44,7 +45,7 @@ stopifnot(system("which infoseq",intern=TRUE) == "")
 # cat(paste(getopt(spec, usage=T),"\n"));
 dist_matrix_file = opt[["matrix"]]
 tree_method = opt[["tree_method"]]
-tree_method = opt[["assembly"]]
+assembly = opt[["assembly"]]
 
 
 
@@ -61,7 +62,7 @@ colnames(dist_matrix) = labels
 tree = nj(dist_matrix)
 
 
-plot(tree,show.tip.label=FALSE,type="r")
+plot(tree,show.tip.label=FALSE,type="p")
 
 
 ###selection of the contamiant subtree:
@@ -69,4 +70,8 @@ plot(tree,show.tip.label=FALSE,type="r")
 g=trex(tree,return.tree=TRUE )
 
 
+system(paste("samtools faidx",opt[["assembly"]] ))
 
+# paste((g$tip.label),collapse= " ")
+
+system(paste("samtools faidx ",opt[["assembly"]], paste(g$tip.label, collapse=" "), "> out.test" ))
