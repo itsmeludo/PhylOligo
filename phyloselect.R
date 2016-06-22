@@ -44,6 +44,7 @@ spec <- matrix(c(
         'assembly'         , 'a', 1, "character", "multifasta file of the contigs (required)",
         'tree_method'     , 't', 2, "character", "tree building method (optional), by default NJ",
         'outfile'     , 't', 2, "character", "tree building method (optional), by default NJ",
+        'branchlength'           , 'h', 0, "logical",   "this help"
         'help'           , 'h', 0, "logical",   "this help"
 ),ncol=5,byrow=T)
 
@@ -55,7 +56,10 @@ if (!is.null(opt[["help"]]) || is.null(opt[["matrix"]])) {
     cat(paste(getopt(spec, usage=T),"\n"));
 }
 
-outfile = ifelse(is.null(opt[["outfile"]]), test <- "phyloligo.out" , test <-opt[["outfile"]])
+outfile = ifelse(is.null(opt[["outfile"]]), outfile <- "phyloligo.out" , outfile <-opt[["outfile"]])
+
+branchlength = ifelse(is.null(opt[["branchlength"]]), branchlength <- "FALSE" , branchlength <-opt[["branchlength"]])
+
 
 
 if ( system("which infoseq",intern=TRUE) == ""){
@@ -71,6 +75,7 @@ stopifnot(system("which infoseq",intern=TRUE,ignore.stdout = TRUE, ignore.stderr
 dist_matrix_file = opt[["matrix"]]
 tree_method = opt[["tree_method"]]
 assembly = opt[["assembly"]]
+branchlength = opt[["branchlength"]]
 
 dist_matrix = as.matrix(read.delim(dist_matrix_file,sep="\t", header = FALSE))
 
@@ -103,8 +108,9 @@ colfunc<-colorRampPalette(c("red","orange","yellow","green"))
 edge_lab=lapply(edge_perc,function(x){paste(x,"%",sep="")})
 
 X11() # external display when script is launched with Rscript command
-par(ljoin = 2, lend = 2)
-plot(tree,type="r",show.tip.label=FALSE,edge.width=edge_size/sum(edge_size)*100*15,edge.color = colfunc(100)[round(edge_perc)])
+# par(ljoin = 1, lend = 1)
+plot(tree,use.edge.length=FALSE,type="c",show.tip.label=FALSE,edge.width=edge_size/sum(edge_size)*100*40)
+# plot(tree,use.edge.length=FALSE,type="c",show.tip.label=FALSE,edge.width=edge_size/sum(edge_size)*100*15,edge.color = colfunc(100)[round(edge_perc)])
 edgelabels(text=edge_lab,adj=c(0.5,-0.5),frame="none",font=2)
 
 
