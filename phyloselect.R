@@ -7,7 +7,6 @@
 ### Garanteed with misatkes. <- Including this one.
 ### Important notes:
 
-
 ### dependencies:
 # library(gtools)
 library(ape)
@@ -16,7 +15,54 @@ library(getopt) #install.packages("getopt")   #maybe launch it as admin or root 
 ### EMBOSS in the exec PATH 
 ### samtools in the exec PATH 
 
-node_all_leaves<-function(tree,node){
+# Functions :
+
+dev.new <- function(width = 7, height = 10) {
+  platform <- sessionInfo()$platform
+  if (grepl("linux",platform)) {
+    x11(width=width, height=height) 
+  } else if (grepl("pc",platform)) {
+    windows(width=width, height=height)
+  } else if (grepl("apple", platform)) {
+    quartz(width=width, height=height)
+  }
+}
+
+get_children<-function(tree,node){
+  # Get all children of a given node
+  tree$edge[,2][tree$edge[,1]==node]
+}
+
+get_all_children<-function(tree,node){
+  # Retrieve all nodes (internal and leaves) from a given node
+  edges<-tree$edge
+  file=c()
+  nt=c()
+  file=c(file,node)
+  while(length(file)>0){
+    tmp=edges[,2][edges[,1]==file[1]]
+    file=c(file,tmp)
+    file<-file[-1]
+    nt=c(nt,file[1])
+  }
+  return(sort(nt))
+}
+
+get_all_edges<-function(phy,node){
+  # Retrieve all edges from a given node
+  nodes=get_all_children(phy,node)
+  res=lapply(nodes,function(x,edges){
+   which((x==edges[,1] | x==edges[,2]))
+  },edges=phy$edge)
+  return(unique(unlist(res)))
+}
+
+get_parent<-function(tree,node){
+  # Get parent of a given node
+  tree$edge[,1][tree$edge[,2]==node]
+}
+
+get_all_leaves<-function(tree,node){
   # Return all leaf considering a given tree and node
   tips=tree$tip.label
   edges=tree$edge
@@ -39,31 +85,122 @@ node_all_leaves<-function(tree,node){
   sort(nt)
 }
 
+tree_zoom<-function(phy, title = TRUE, subbg = "white", return.tree = FALSE,edge_size=NULL,edge_label=NULL,...){
+  lastPP <- get("last_plot.phylo", envir= .PlotPhyloEnv)
+  devmain <-dev.cur()
+  restore <- function(){
+    dev.set(devmain)
+    assign("last_plot.phylo", lastPP, envir = .PlotPhyloEnv)
+  }
+  on.exit(restore())
+  
+  NEW<- TRUE
+  cat("Click close to a node. Right-click to exit.\n")
+  
+  subtree=NaN
+  
+  edge_size_tree<-edge_size
+  edge_size<-log(edge_size+1)
+  
+  repeat{
+    x <- identify.phylo(phy, quiet=TRUE)
+    if (is.null(x))
+      return(invisible(NULL))
+    else{
+      x <- x$nodes
+      orig_edges_id=get_all_edges(phy,x)
+      
+      dev.set(devmain)
+      
+      edge_selected_color=rep("black",length(phy$edge))
+      edge_selected_color[orig_edges_id]<-"red"
+      
+      plot(phy,use.edge.length=lastPP$use.edge.length,type=lastPP$type,show.tip.label=lastPP$show.tip.label,edge.width=edge_size_tree,edge.color=edge_selected_color)
+      edgelabels(text=edge_lab,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5,col = edge_selected_color)
+      
+      if (is.null(x))
+        cat("Try again!\n")
+      else{
+        if (NEW){
+          dev.new()
+          par(bg=subbg)
+          devsub <- dev.cur()
+          NEW <- FALSE
+        }
+        else dev.set(devsub)
+        tr <<- extract.clade(phy,x)
+        if(!is.null(edge_size)){
+          v<-0.1+edge_size[orig_edges_id]
+          k<-as.integer(tree$Nnode)/length(get_all_children(phy,x))
+          es<-v*k
+          edge.width<-es
+          plot(tr,edge.width=es,...) 
+        }else{
+          plot(tr,...)
+        }
+        if(!is.null(edge_label)){
+          edgelabels(text=edge_label[orig_edges_id],adj=c(0.5,-1),cex=0.5,frame="none",font=2)
+        }
+        if (is.character(title))
+          title(title)
+        else if (title) {
+          tl <- if (is.null(phy$node.label)) 
+            paste("From node #", x, sep = "")
+          else paste("From", phy$node.label[x - Ntip(phy)])
+          title(tl)
+        }
+        if(!is.null(tr) & return.tree==TRUE)
+          subtree=tr
+          if(return.tree){
+            cat ("Type 'r'+[enter] to export clade-corresponding contig sequences (fasta)")
+            line <- readLines(file("stdin"),n=1L)
+            devcur <-dev.cur()
+            print(line)
+            if (line == 'r')
+              return(subtree)
+          }
+        restore()
+        plot(phy,use.edge.length=lastPP$use.edge.length,type=lastPP$type,show.tip.label=lastPP$show.tip.label,edge.width=edge_size_tree,edge.color=edge_selected_color)
+        edgelabels(text=edge_lab,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5,col = edge_selected_color)
+      }
+    }
+  }
+}
+
+outersect <- function(x, y, ...) {
+  # Extraire les valeurs qui diffèrent entre plusieurs listes 
+  big.vec <- c(x, y, ...)
+  duplicates <- big.vec[duplicated(big.vec)]
+  setdiff(big.vec, unique(duplicates))
+}
+
 spec <- matrix(c(
-        'matrix'         , 'i', 1, "character", "all-by-all contig distance matrix, tab separated (required)",
-        'assembly'         , 'a', 1, "character", "multifasta file of the contigs (required)",
-        'tree_method'     , 't', 2, "character", "tree building method (optional), by default NJ",
-        'outfile'     , 't', 2, "character", "tree building method (optional), by default NJ",
-        'branchlength'           , 'h', 0, "logical",   "this help"
-        'help'           , 'h', 0, "logical",   "this help"
+  'matrix'         , 'i', 1, "character", "all-by-all contig distance matrix, tab separated (required)",
+  'assembly'         , 'a', 1, "character", "multifasta file of the contigs (required)",
+  'tree_method'     , 't', 2, "character", "tree building method (optional), by default NJ",
+  'max_perc'     , 'g', 2, "double", "max edge assembly length percentage displayed (%)",
+  'min_perc'     , 'l', 2, "double", "min edge assembly length percentage displayed (%)",
+  'keep_perc'           , 'k', 2, "double",   "ratio of out-of-range percentages to display (%)",
+  'outfile'     , 'o', 2, "character", "outfile",
+  'branchlength'           , 'b', 0, "logical",   "display branch length",
+  'help'           , 'h', 0, "logical",   "this help"
 ),ncol=5,byrow=T)
 
-#         
-
+  
 opt = getopt(spec);
 # [[""]]
 if (!is.null(opt[["help"]]) || is.null(opt[["matrix"]])) {
-    cat(paste(getopt(spec, usage=T),"\n"));
+  cat(paste(getopt(spec, usage=T),"\n"));
 }
 
 outfile = ifelse(is.null(opt[["outfile"]]), outfile <- "phyloligo.out" , outfile <-opt[["outfile"]])
-
 branchlength = ifelse(is.null(opt[["branchlength"]]), branchlength <- "FALSE" , branchlength <-opt[["branchlength"]])
-
-
+keep_perc = ifelse(is.null(opt[["keep_perc"]]), keep_perc <- 5 , keep_perc <-opt[["keep_perc"]])
+min_perc = ifelse(is.null(opt[["min_perc"]]), min_perc <- 0.5 , min_perc <-opt[["min_perc"]])
+max_perc = ifelse(is.null(opt[["max_perc"]]), max_perc <- 30 , max_perc <-opt[["max_perc"]])
 
 if ( system("which infoseq",intern=TRUE) == ""){
-    print("Please Install EMBOSS")
+  print("Please Install EMBOSS")
 }
 stopifnot(system("which infoseq",intern=TRUE,ignore.stdout = TRUE, ignore.stderr = TRUE) == "")
 
@@ -72,6 +209,10 @@ stopifnot(system("which infoseq",intern=TRUE,ignore.stdout = TRUE, ignore.stderr
 
 
 # cat(paste(getopt(spec, usage=T),"\n"));
+
+# dist_matrix_file="~/Documents/Ludovic/data/mat_th.out"
+# assembly="~/Documents/Ludovic/data/TH12-rn_prefix.fna"
+
 dist_matrix_file = opt[["matrix"]]
 tree_method = opt[["tree_method"]]
 assembly = opt[["assembly"]]
@@ -93,36 +234,71 @@ names(vlen)<-labels
 # Cumative size for tree edges
 
 edge_size<-unlist(apply(as.matrix(tree$edge),1,function(x){
-  sum(vlen[node_all_leaves(tree,x[2])])
+  sum(vlen[get_all_leaves(tree,x[2])])
 }))
 
 # Percentage of cumulative contigs length for tree edges
 
 edge_perc<-unlist(apply(as.matrix(tree$edge),1,function(x){
-  res=round(sum(vlen[node_all_leaves(tree,x[2])])/sum(vlen)*100,digits = 0)
+  #res=round(sum(vlen[get_all_leaves(tree,x[2])])/sum(vlen)*100,digits = 0)
+  res=sum(vlen[get_all_leaves(tree,x[2])])/sum(vlen)*100
 }))
+
+# Edge labels (filtering percentages to display)
+
+edge_lab=unlist(lapply(edge_perc,function(x){
+  paste(round(x,digits=0),"%",sep="")
+}))
+
+avoidable_edge_perc=outersect(
+  which(!(min_perc<=edge_perc & edge_perc<=max_perc)), # edge_perc avoidable
+  sample(edge_perc, round((keep_perc/100)*length(edge_perc)), replace=FALSE) # edge_perc kept
+)
+
+edge_lab[avoidable_edge_perc]<-""
+
+#edge_lab[which(tree$edge[,2] %in% 1:length(tree$tip.label))]<-""
+
+# for(i in 1:nrow(tree$edge)){
+#   current_node=tree$edge[i,2]
+#   
+#   root_id=length(tree$tip.label)+1
+#   
+#   if(tree$edge[i,1]!=root_id){
+#     parent=get_parent(tree,current_node)
+#     parent_edge_id=which(tree$edge[,2]==parent)
+#     
+#     calc=as.numeric(edge_perc[parent_edge_id])-as.numeric(edge_perc[i])
+#     print(calc)
+#     if(calc<1.0){
+#       edge_lab[i]<-""
+#     }
+#     
+#   }
+#   
+#   old_node=current_node
+# }
 
 # Plot the tree with cumulative contig length (width of edges) and cumalative contig length percentage (edge label)
 
-colfunc<-colorRampPalette(c("red","orange","yellow","green"))
-edge_lab=lapply(edge_perc,function(x){paste(x,"%",sep="")})
+#colfunc<-colorRampPalette(c("red","orange","yellow","green"))
 
-X11() # external display when script is launched with Rscript command
+# Remove label for terminal edges
+
+X11(width=12,height=10) # external display when script is launched with Rscript command
 # par(ljoin = 1, lend = 1)
-plot(tree,use.edge.length=FALSE,type="c",show.tip.label=FALSE,edge.width=edge_size/sum(edge_size)*100*40)
-# plot(tree,use.edge.length=FALSE,type="c",show.tip.label=FALSE,edge.width=edge_size/sum(edge_size)*100*15,edge.color = colfunc(100)[round(edge_perc)])
-edgelabels(text=edge_lab,adj=c(0.5,-0.5),frame="none",font=2)
 
+edge_size=edge_size/sum(edge_size)*100*40
 
+plot(tree,use.edge.length=FALSE,type="c",show.tip.label=FALSE,edge.width=edge_size)
+#plot(tree,use.edge.length=FALSE,type="c",show.tip.label=FALSE,edge.width=edge_size/sum(edge_size)*100*15,edge.color = colfunc(100)[round(edge_perc)])
+edgelabels(text=edge_lab,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5)
 
 ###manually selecting the subtree of the putative contaminant:
-g=trex(tree,return.tree=TRUE)
-plot(g)
 
-# Wait the plot of g
+g=tree_zoom(tree,return.tree=TRUE,type='c',use.edge.length=FALSE,cex=0.5,font=2,edge_size=edge_size,edge_label=edge_lab)
 
-message("Press Return To Continue")
-invisible(readLines("stdin", n=1))
+# Export clade-corresponding contig in fasta format
 
 system(paste("samtools faidx",assembly))
 
