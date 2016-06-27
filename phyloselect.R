@@ -54,7 +54,7 @@ get_all_edges<-function(phy,node){
   res=lapply(nodes,function(x,edges){
    which((x==edges[,1] | x==edges[,2]))
   },edges=phy$edge)
-  return(unique(unlist(res)))
+  return(sort(unique(unlist(res))))
 }
 
 get_parent<-function(tree,node){
@@ -85,7 +85,7 @@ get_all_leaves<-function(tree,node){
   sort(nt)
 }
 
-tree_zoom<-function(phy, title = TRUE, subbg = "white", return.tree = FALSE,edge_size=NULL,edge_label=NULL,...){
+tree_zoom<-function(phy, title = TRUE, subbg = "white", return.tree = FALSE,edge_size=rep(0.5,nrow(phy$edge)),edge_label=rep("",nrow(phy$edge)),lim_tip=125,...){
   lastPP <- get("last_plot.phylo", envir= .PlotPhyloEnv)
   devmain <-dev.cur()
   restore <- function(){
@@ -94,13 +94,13 @@ tree_zoom<-function(phy, title = TRUE, subbg = "white", return.tree = FALSE,edge
   }
   on.exit(restore())
   
-  NEW<- TRUE
+  #NEW<- TRUE
   cat("Click close to a node. Right-click to exit.\n")
   
   subtree=NaN
   
   edge_size_tree<-edge_size
-  edge_size<-log(edge_size+1)
+  edge_size<-log(edge_size+1,base=1.5)
   
   repeat{
     x <- identify.phylo(phy, quiet=TRUE)
@@ -108,6 +108,7 @@ tree_zoom<-function(phy, title = TRUE, subbg = "white", return.tree = FALSE,edge
       return(invisible(NULL))
     else{
       x <- x$nodes
+      
       orig_edges_id=get_all_edges(phy,x)
       
       dev.set(devmain)
@@ -116,27 +117,39 @@ tree_zoom<-function(phy, title = TRUE, subbg = "white", return.tree = FALSE,edge
       edge_selected_color[orig_edges_id]<-"red"
       
       plot(phy,use.edge.length=lastPP$use.edge.length,type=lastPP$type,show.tip.label=lastPP$show.tip.label,edge.width=edge_size_tree,edge.color=edge_selected_color)
-      edgelabels(text=edge_lab,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5,col = edge_selected_color)
+      edgelabels(text=edge_label,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5,col = edge_selected_color)
       
       if (is.null(x))
         cat("Try again!\n")
       else{
-        if (NEW){
-          dev.new()
-          par(bg=subbg)
-          devsub <- dev.cur()
-          NEW <- FALSE
-        }
-        else dev.set(devsub)
+        #if (NEW){
+        dev.new()
+        par(bg=subbg)
+        devsub <- dev.cur()
+        #NEW <- FALSE
+        #}
+        #else dev.set(devsub)
         tr <<- extract.clade(phy,x)
+        
+        cex_tip=(1/(1+2*log(base=10,tr$Nnode))*1+log(base=10,2-(tr$Nnode/phy$Nnode)))
+        
         if(!is.null(edge_size)){
           v<-0.1+edge_size[orig_edges_id]
           k<-as.integer(tree$Nnode)/length(get_all_children(phy,x))
+          k<-1
           es<-v*k
           edge.width<-es
-          plot(tr,edge.width=es,...) 
+          if(tr$Nnode<=lim_tip){
+            plot(tr,edge.width=es,cex=cex_tip,...) 
+          }else{
+            plot(tr,edge.width=es,show.tip.label=F,...)
+          }
         }else{
-          plot(tr,...)
+          if(tr$Nnode<=lim_tip){
+            plot(tr,cex=cex_tip,...) 
+          }else{
+            plot(tr,show.tip.label=F,...)
+          }
         }
         if(!is.null(edge_label)){
           edgelabels(text=edge_label[orig_edges_id],adj=c(0.5,-1),cex=0.5,frame="none",font=2)
@@ -151,17 +164,16 @@ tree_zoom<-function(phy, title = TRUE, subbg = "white", return.tree = FALSE,edge
         }
         if(!is.null(tr) & return.tree==TRUE)
           subtree=tr
-          if(return.tree){
-            cat ("Type 'r'+[enter] to export clade-corresponding contig sequences (fasta)")
-            line <- readLines(file("stdin"),n=1L)
-            devcur <-dev.cur()
-            print(line)
-            if (line == 'r')
-              return(subtree)
-          }
+          cat ("Type 'r'+[enter] to export clade-corresponding contig sequences (fasta)")
+          line <- readLines(file("stdin"),n=1L)
+          print(line)
+          if (line == 'r')
+            return(subtree)
+          else
+            dev.off(devsub)
         restore()
-        plot(phy,use.edge.length=lastPP$use.edge.length,type=lastPP$type,show.tip.label=lastPP$show.tip.label,edge.width=edge_size_tree,edge.color=edge_selected_color)
-        edgelabels(text=edge_lab,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5,col = edge_selected_color)
+        plot(phy,use.edge.length=lastPP$use.edge.length,type=lastPP$type,show.tip.label=lastPP$show.tip.label,edge.width=edge_size_tree)
+        edgelabels(text=edge_label,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5)
       }
     }
   }
@@ -296,7 +308,7 @@ edgelabels(text=edge_lab,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5)
 
 ###manually selecting the subtree of the putative contaminant:
 
-g=tree_zoom(tree,return.tree=TRUE,type='c',use.edge.length=FALSE,cex=0.5,font=2,edge_size=edge_size,edge_label=edge_lab)
+g=tree_zoom(tree,return.tree=TRUE,type='c',use.edge.length=FALSE,font=2,edge_size=edge_size,edge_label=edge_lab)
 
 # Export clade-corresponding contig in fasta format
 
