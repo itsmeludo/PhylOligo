@@ -17,6 +17,7 @@ library(getopt) #install.packages("getopt")   #maybe launch it as admin or root 
 
 # Functions :
 
+
 dev.new <- function(width = 7, height = 10) {
   platform <- sessionInfo()$platform
   if (grepl("linux",platform)) {
@@ -85,7 +86,7 @@ get_all_leaves<-function(tree,node){
   sort(nt)
 }
 
-tree_zoom<-function(phy, title = TRUE, subbg = "white", return.tree = FALSE,edge_size=rep(0.5,nrow(phy$edge)),edge_label=rep("",nrow(phy$edge)),lim_tip=125,...){
+clade_select<-function(phy, title = TRUE, subbg = "white", return.tree = FALSE,edge_size=rep(0.5,nrow(phy$edge)),edge_label=rep("",nrow(phy$edge)),lim_tip=125,...){
   lastPP <- get("last_plot.phylo", envir= .PlotPhyloEnv)
   devmain <-dev.cur()
   restore <- function(){
@@ -102,7 +103,9 @@ tree_zoom<-function(phy, title = TRUE, subbg = "white", return.tree = FALSE,edge
   edge_size_tree<-edge_size
   edge_size<-log(edge_size+1,base=1.5)
   
-  repeat{
+  user_decision=1
+  subset=1
+  while (user_decision != "E"){
     x <- identify.phylo(phy, quiet=TRUE)
     if (is.null(x))
       return(invisible(NULL))
@@ -164,20 +167,40 @@ tree_zoom<-function(phy, title = TRUE, subbg = "white", return.tree = FALSE,edge
         }
         if(!is.null(tr) & return.tree==TRUE)
           subtree=tr
-          cat ("Type 'r'+[enter] to export clade-corresponding contig sequences (fasta)")
-          line <- readLines(file("stdin"),n=1L)
-          print(line)
-          if (line == 'r')
-            return(subtree)
-          else
-            dev.off(devsub)
-        restore()
-        plot(phy,use.edge.length=lastPP$use.edge.length,type=lastPP$type,show.tip.label=lastPP$show.tip.label,edge.width=edge_size_tree)
-        edgelabels(text=edge_label,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5)
+          cat("Do you want to export this contig subset as fasta? (y)es, export it. (n)o, discard this selection and let me select another node. (E)xit, I'm done with the selection and exports.\n")
+          user_decision <- readLines(file("stdin"),n=1L)
+          # print(line)
+          dev.off(devsub)
+          if (user_decision == "y")
+            #return(subtree)
+            system(paste("samtools faidx ",assembly," ",paste(subtree$tip.label, collapse=" "), " > ",outfile,"_",subset,".fa",sep="" ))
+            subset=subset+1
+          if (user_decision != "E")
+            restore()
+            plot(phy,use.edge.length=lastPP$use.edge.length,type=lastPP$type,show.tip.label=lastPP$show.tip.label,edge.width=edge_size_tree)
+            edgelabels(text=edge_label,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5)
       }
     }
   }
 }
+
+
+# print("toto")
+
+# clade_select = function (){
+#     user_decision=1
+#     subset=1
+#     while (substr(user_decision, 1, 1) != "E"){
+#         g=tree_zoom(tree,return.tree=TRUE,type='c',use.edge.length=FALSE,cex=0.5,font=2,edge_size=edge_size,edge_label=edge_lab)
+#         user_decision = readline("Do you want to export this contig subset as fasta? (y)es, export it. (n)o, discard this selection and let me select another node. (E)xit, I'm done with the selection and exports.")
+#         if (substr(user_decision, 1, 1) == "y"){
+#             system(paste("samtools faidx ",assembly," ",paste(g$tip.label, collapse=" "), " > ",outfile,"_",subset,".fa",sep="" ))
+#             subset=subset+1
+#         }
+#     }
+# 
+#     
+# }
 
 outersect <- function(x, y, ...) {
   # Extraire les valeurs qui diffèrent entre plusieurs listes 
@@ -189,16 +212,18 @@ outersect <- function(x, y, ...) {
 spec <- matrix(c(
   'matrix'         , 'i', 1, "character", "all-by-all contig distance matrix, tab separated (required)",
   'assembly'         , 'a', 1, "character", "multifasta file of the contigs (required)",
-  'tree_method'     , 't', 2, "character", "tree building method (optional), by default NJ",
+  'tree_method'     , 't', 2, "character", "tree building method (optional), by default NJ. No other option implemented ATM",
+  'dump_R_session'     , 'd', 0, "logical", "Should the R environment saved for later exploration? the filename will be generated from the outfile parameter or its default value",
   'max_perc'     , 'g', 2, "double", "max edge assembly length percentage displayed (%)",
   'min_perc'     , 'l', 2, "double", "min edge assembly length percentage displayed (%)",
   'keep_perc'           , 'k', 2, "double",   "ratio of out-of-range percentages to display (%)",
-  'outfile'     , 'o', 2, "character", "outfile",
+  'outfile'     , 'o', 2, "character", "outfile name, default:phyloligo.out",
   'branchlength'           , 'b', 0, "logical",   "display branch length",
+  'verbose'           , 'v', 0, "logical",   "say what the program do",
   'help'           , 'h', 0, "logical",   "this help"
 ),ncol=5,byrow=T)
 
-  
+
 opt = getopt(spec);
 # [[""]]
 if (!is.null(opt[["help"]]) || is.null(opt[["matrix"]])) {
@@ -307,13 +332,16 @@ plot(tree,use.edge.length=FALSE,type="c",show.tip.label=FALSE,edge.width=edge_si
 edgelabels(text=edge_lab,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5)
 
 ###manually selecting the subtree of the putative contaminant:
+system(paste("samtools faidx",assembly))
 
-g=tree_zoom(tree,return.tree=TRUE,type='c',use.edge.length=FALSE,font=2,edge_size=edge_size,edge_label=edge_lab)
+clade_select(tree,return.tree=TRUE,type='c',use.edge.length=FALSE,font=2,edge_size=edge_size,edge_label=edge_lab)
 
 # Export clade-corresponding contig in fasta format
 
-system(paste("samtools faidx",assembly))
-
 # paste((g$tip.label),collapse= " ")
 
-system(paste("samtools faidx ",assembly, paste(g$tip.label, collapse=" "), "> ",outfile ))
+
+if (!is.null(opt[["dump_R_session"]])) {
+  save.image(file=paste(outfile,"_phyloligo_dump.RData"));
+}
+
