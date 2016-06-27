@@ -87,6 +87,7 @@ get_all_leaves<-function(tree,node){
 }
 
 clade_select<-function(phy, title = TRUE, subbg = "white", return.tree = FALSE,edge_size=rep(0.5,nrow(phy$edge)),edge_label=rep("",nrow(phy$edge)),lim_tip=125,...){
+  # Allow user to select specific clades(s) on contigs tree, corresponding sequences could be exported in a fasta file
   lastPP <- get("last_plot.phylo", envir= .PlotPhyloEnv)
   devmain <-dev.cur()
   restore <- function(){
