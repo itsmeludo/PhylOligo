@@ -180,6 +180,7 @@ clade_select<-function(phy, title = TRUE, subbg = "white", return.tree = FALSE,e
                 plot(phy,use.edge.length=lastPP$use.edge.length,type=lastPP$type,show.tip.label=lastPP$show.tip.label,edge.width=edge_size_tree,edge.color=edge_selected_color)
                 edgelabels(text=edge_label,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5,col = edge_selected_color)
             dev.off()
+            if (opt[["verbose"]]) print(paste(date(), "User exported a clade stored in ",paste(outfile,"_",subset,".fa",sep="")))
             subset=subset+1
             
           if (user_decision != "E")
@@ -217,7 +218,7 @@ outersect <- function(x, y, ...) {
 }
 
 
-interactive_mode=function{
+interactive_mode=function(){
     clade_select(tree,return.tree=TRUE,type='c',use.edge.length=FALSE,font=2,edge_size=edge_size,edge_label=edge_lab)
 }
 
@@ -240,6 +241,10 @@ opt = getopt(spec);
 # [[""]]
 if (!is.null(opt[["help"]]) || is.null(opt[["matrix"]])) {
   cat(paste(getopt(spec, usage=T),"\n"));
+}
+
+if (is.null(opt[["verbose"]])) {
+  opt[["verbose"]]=FALSE;
 }
 
 outfile = ifelse(is.null(opt[["outfile"]]), outfile <- "phyloligo.out" , outfile <-opt[["outfile"]])
@@ -273,19 +278,19 @@ branchlength = opt[["branchlength"]]
 
 
 
-if (opt[["verbose"]]) print("Reads matrix file")
+if (opt[["verbose"]]) print(paste(date(), "Reads matrix file"))
 dist_matrix = as.matrix(read.delim(dist_matrix_file,sep="\t", header = FALSE))
 
 
 
 
-if (opt[["verbose"]]) print("Format data")
+if (opt[["verbose"]]) print(paste(date(), "Format data"))
 labels = system(paste("infoseq -auto -nocolumns -only -noheading -name ",assembly),intern=TRUE)
 lengths = as.numeric(system(paste("infoseq -auto -nocolumns -only -noheading -length ",assembly),intern=TRUE))
 colnames(dist_matrix) = labels
 
 
-if (opt[["verbose"]]) print("Building NJ tree")
+if (opt[["verbose"]]) print(paste(date(), "Building NJ tree"))
 tree = nj(dist_matrix)
 
 # Vector containing contigs size with corresponding name
@@ -348,7 +353,7 @@ edge_lab[avoidable_edge_perc]<-""
 # Remove label for terminal edges
 
 
-if (opt[["verbose"]]) print("Computing Tree plot")
+if (opt[["verbose"]]) print(paste(date(), "Computing Tree plot"))
 X11(width=12,height=10) # external display when script is launched with Rscript command
 # par(ljoin = 1, lend = 1)
 
@@ -358,18 +363,18 @@ plot(tree,use.edge.length=FALSE,type="c",show.tip.label=FALSE,edge.width=edge_si
 #plot(tree,use.edge.length=FALSE,type="c",show.tip.label=FALSE,edge.width=edge_size/sum(edge_size)*100*15,edge.color = colfunc(100)[round(edge_perc)])
 edgelabels(text=edge_lab,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5)
 
-if (opt[["verbose"]]) print("Indexing fasta file")
+if (opt[["verbose"]]) print(paste(date(), "Indexing fasta file"))
 ###manually selecting the subtree of the putative contaminant:
 system(paste("samtools faidx",assembly))
 
-if (opt[["verbose"]]) print("Entering interactive mode of clade selection to constitute learning sets for contalocate")
+if (opt[["verbose"]]) print(paste(date(), "Entering interactive mode of clade selection to constitute learning sets for contalocate"))
 clade_select(tree,return.tree=TRUE,type='c',use.edge.length=FALSE,font=2,edge_size=edge_size,edge_label=edge_lab)
 
 # Export clade-corresponding contig in fasta format
 
 # paste((g$tip.label),collapse= " ")
 
-if (opt[["verbose"]]) print("Dumping the R object. To reuse it in the future, open R, load this file with load(\"file\") and call the function interactive_mode(). Beware that files and former selections might get overwritten.")
+if (opt[["verbose"]]) print(paste(date(), "Dumping the R object. To reuse it in the future, open R, load this file with load(\"file\") and call the function interactive_mode(). Beware that files and former selections might get overwritten."))
 if (!is.null(opt[["dump_R_session"]])) {
   save.image(file=paste(outfile,"_phyloligo_dump.RData"));
 }
