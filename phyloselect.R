@@ -175,7 +175,13 @@ clade_select<-function(phy, title = TRUE, subbg = "white", return.tree = FALSE,e
           if (user_decision == "y")
             #return(subtree)
             system(paste("samtools faidx ",assembly," ",paste(subtree$tip.label, collapse=" "), " > ",outfile,"_",subset,".fa",sep="" ))
+#             plots à join colored mapping  to each selected clade:
+            pdf(file=paste(outfile,"_",subset,".pdf",sep=""),width=16,height=9)
+                plot(phy,use.edge.length=lastPP$use.edge.length,type=lastPP$type,show.tip.label=lastPP$show.tip.label,edge.width=edge_size_tree,edge.color=edge_selected_color)
+                edgelabels(text=edge_label,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5,col = edge_selected_color)
+            dev.off()
             subset=subset+1
+            
           if (user_decision != "E")
             restore()
             plot(phy,use.edge.length=lastPP$use.edge.length,type=lastPP$type,show.tip.label=lastPP$show.tip.label,edge.width=edge_size_tree)
@@ -220,7 +226,7 @@ spec <- matrix(c(
   'keep_perc'           , 'k', 2, "double",   "ratio of out-of-range percentages to display (%)",
   'outfile'     , 'o', 2, "character", "outfile name, default:phyloligo.out",
   'branchlength'           , 'b', 0, "logical",   "display branch length",
-  'verbose'           , 'v', 0, "logical",   "say what the program do",
+  'verbose'           , 'v', 0, "logical",   "say what the program do. Not implemented yet.",
   'help'           , 'h', 0, "logical",   "this help"
 ),ncol=5,byrow=T)
 
