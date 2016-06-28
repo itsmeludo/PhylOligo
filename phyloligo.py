@@ -31,7 +31,6 @@ numpy.seterr(divide='ignore', invalid='ignore')
 def KL(a,b):
     """ compute the KL distance
     """
-    #with numpy.errstate(invalid='ignore'):
     d = a * numpy.log(a/b)
     d[numpy.isnan(d)]=0 
     d[numpy.isinf(d)]=0
@@ -40,16 +39,14 @@ def KL(a,b):
 def Eucl(a,b):
     """ compute Euclidean distance
     """
-    #with numpy.errstate(invalid='ignore'):
     d = pow(a-b,2)
     d[numpy.isnan(d)]=0
     d[numpy.isinf(d)]=0
     return numpy.sqrt(numpy.sum(d))*10000
 
 def JSD(a,b):
-    """ Compute JSP distance
+    """ Compute JSD distance
     """
-    #with numpy.errstate(invalid='ignore'):
     h = (a + b)/2
     d = (KL(a,h)/2)+(KL(b,h)/2)
     return d
@@ -87,7 +84,7 @@ def select_strand (seq, strand="both"):
     Parameters:
     -----------
     seq: Seq
-        a Biopython seq object
+        a str object containing a nucleotide sequence, that can be converted into a Bio.Seq object
     strand: string
         select wich strand to use
     
