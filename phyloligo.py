@@ -20,18 +20,17 @@ import argparse
 from Bio import SeqIO
 from Bio.Seq import Seq
 
-import os
-import re
-import math
+import os, sys, re, math
 import numpy
 import multiprocessing
 from collections import Counter
 from itertools import product
 
-
 numpy.seterr(divide='ignore', invalid='ignore')
 
 def KL(a,b):
+    """ compute the KL distance
+    """
     #with numpy.errstate(invalid='ignore'):
     d = a * numpy.log(a/b)
     d[numpy.isnan(d)]=0 
@@ -39,6 +38,8 @@ def KL(a,b):
     return (numpy.sum(d))*10000
 
 def Eucl(a,b):
+    """ compute Euclidean distance
+    """
     #with numpy.errstate(invalid='ignore'):
     d = pow(a-b,2)
     d[numpy.isnan(d)]=0
@@ -46,38 +47,70 @@ def Eucl(a,b):
     return numpy.sqrt(numpy.sum(d))*10000
 
 def JSD(a,b):
+    """ Compute JSP distance
+    """
     #with numpy.errstate(invalid='ignore'):
     h = (a + b)/2
     d = (KL(a,h)/2)+(KL(b,h)/2)
     return d
 
-
-
 def vector_to_matrix(profile):
+    """ transform a vector of profile to a matrix
+    """
     return list((zip(*(iter(profile),)*int(math.sqrt(len(profile))))))
 
-def chunkitize(liste, chunks):
-    out=list()
-    chunk_size= int((len(liste) / float(chunks)))
-    for i in range(0,chunks):
-        out.append(liste[chunk_size*i:(chunk_size*i+chunk_size)if(i!=chunks-1)else len(liste)])
+def chunkitize(toseparate, nb_chunks):
+    """ separate a list into sublist of the same size
+    
+    Parameters:
+    -----------
+    toseparate: list
+        to be cut into sublists
+    nb_chunks: int
+        the number of sublists
+    
+    Return:
+    -------
+    out: list
+        a list of n=nb_chunks sublist
+    
+    >>> chunkitize([1, 2, 3, 4, 5], 2)
+    ... [[1, 2], [3, 4, 5]]
+    """
+    chunk_size= int((len(toseparate) / float(nb_chunks)))
+    out = [toseparate[chunk_size*i:(chunk_size*i+chunk_size) if (i!=nb_chunks-1) else len(toseparate)] for i in range(0, nb_chunks)]
     return out
 
-#chunkitize([1, 2, 3, 4, 5], 2)
-
-def select_strand (seq,strand="both"):
+def select_strand (seq, strand="both"):
+    """ choose which strand to work on
+    
+    Parameters:
+    -----------
+    seq: Seq
+        a Biopython seq object
+    strand: string
+        select wich strand to use
+    
+    Return:
+    -------
+    seq: string
+        the sequence strand
+    """
     Bioseq_record=Seq(seq)
-    if(strand == "both"):
+    if (strand == "both"):
         return str(str(seq)+str(Bioseq_record.reverse_complement())).upper()
-    elif(strand == "minus"):
+    elif (strand == "minus"):
         return str(Bioseq_record.reverse_complement()).upper()
-    elif(strand == "plus"):
+    elif (strand == "plus"):
         return str(seq).upper()
     else:
-        return 1
+        print("Error, strand parameter of selectd_strand() should be choose from {'both', 'minus', 'plus'}", file=sys.stderr)
+        sys.exit(1)
 
 
-def frequency (seq,ksize=4,strand="both"):
+def frequency (seq, ksize=4, strand="both"):
+    """ compute kmer frequency
+    """
     seq=select_strand(seq,strand)
     seq_words=list()
     d=dict()
@@ -107,24 +140,46 @@ def frequency (seq,ksize=4,strand="both"):
 
 
 def pairwise_distance (args):
+    """ compute pairwise distance
+    """
     res=[]
     for i,j,dist,ksize,strand in args:
         res.append((i,j,globals()[dist](numpy.array(frequency(str(records[i].seq))),numpy.array(frequency(str(records[j].seq))))))
     return res
 
 
-def parallel_distance(genome,dist="JSD",ksize=4,strand="both"):
+def parallel_distance(genome, nb_thread, dist, ksize, strand):
+    """ compute distance on multithread
+    
+    Parameters:
+    -----------
+    genome: string
+        path to the genome file
+    nb_thread: int
+        number of parallel instance
+    dist: string
+        distance method to use ('JSD', 'Eucl', 'KL')
+    ksize: int
+        kmer size to use
+    strand: string
+        select genome strand ('both', 'plus', 'minus')
+        
+    Return:
+    -------
+    symmetrical_distance_matrix: numpy.array
+        the matrix storing pairwize distances
+    """
     args=[]
     dist_pairs=[]
     global records
-    records = list(SeqIO.parse(options.genome, "fasta"))
+    records = list(SeqIO.parse(genome, "fasta"))
     for i in range(len(records)):
         for j in range(i+1,len(records)):
-            args.append((i,j,dist,ksize,strand))
+            args.append((i, j, dist, ksize, strand))
     #print(args)
-    parallel_args_set = chunkitize(args,options.threads_max) 
+    parallel_args_set = chunkitize(args, nb_thread) 
     #print(parallel_args_set)
-    pool = multiprocessing.Pool(processes=options.threads_max)
+    pool = multiprocessing.Pool(processes=nb_thread)
     res = pool.map(pairwise_distance, parallel_args_set)
     pool.close()
     pool.join()
@@ -152,8 +207,8 @@ def get_cmd():
     parser.add_argument("-k", "--lgMot", action="store", dest="k", type="int", default=4, help="word wise / kmer lenght / k [default:%default]")
     #parser.add_argument("-w", "--windows_size", action="store", dest="windows_size", type=int, help="Sliding windows size (bp)[default:%default]")
     #parser.add_argument("-t", "--windows_step", action="store", dest="windows_step", type=int, help="Sliding windows step size(bp)[default:%default]")
-    parser.add_argument("-s", "--strand", action="store", dest="strand", default="both", help="strand used to compute microcomposition. leading, lagging ou both [default:%default]")
-    parser.add_argument("-d", "--distance", action="store", dest="dist", default="JSD", help="how to compute distance between two signatures : KL: Kullback-Leibler, Eucl : Euclidienne[default:%default], JSD : Jensen-Shannon divergence")
+    parser.add_argument("-s", "--strand", action="store", dest="strand", default="both", choices=["both", "plus", "minus"], help="strand used to compute microcomposition. leading, lagging ou both [default:%default]")
+    parser.add_argument("-d", "--distance", action="store", dest="dist", default="JSD", choices=["KL", "Eucl", "JSD"], help="how to compute distance between two signatures : KL: Kullback-Leibler, Eucl : Euclidienne[default:%default], JSD : Jensen-Shannon divergence")
     parser.add_argument("-u", "--cpu", action="store", dest="threads_max", type=int, default=4, help="how many threads to use for windows microcomposition computation[default:%default]")
     parser.add_argument("-o", "--out", action="store", dest="out_file", default="phyloligo.out", help="output file[default:%default]")
 
@@ -167,7 +222,7 @@ def main():
     params = get_cmd()
 
     #print("A genome was provided")
-    res = parallel_distance(params.genome, params.dist, params.k, params.strand)
+    res = parallel_distance(params.genome, params.thread_max, params.dist, params.k, params.strand)
     print(res)
     numpy.savetxt(params.out_file, res, delimiter="\t")
     sys.exit(0)
