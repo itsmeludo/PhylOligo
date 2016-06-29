@@ -174,7 +174,7 @@ clade_select<-function(phy, title = TRUE, subbg = "white", return.tree = FALSE,e
           dev.off(devsub)
           if (user_decision == "y")
             #return(subtree)
-            system(paste("samtools faidx ",assembly," ",paste(subtree$tip.label, collapse=" "), " > ",outfile,"_",subset,".fa",sep="" ))
+            system(paste("samtools faidx ",assembly," \"",paste(subtree$tip.label, collapse=" "), "\" > ",outfile,"_",subset,".fa",sep="" ))
 #             plots à join colored mapping  to each selected clade:
             pdf(file=paste(outfile,"_",subset,".pdf",sep=""),width=16,height=9)
                 plot(phy,use.edge.length=lastPP$use.edge.length,type=lastPP$type,show.tip.label=lastPP$show.tip.label,edge.width=edge_size_tree,edge.color=edge_selected_color)
@@ -285,7 +285,8 @@ dist_matrix = as.matrix(read.delim(dist_matrix_file,sep="\t", header = FALSE))
 
 
 if (opt[["verbose"]]) print(paste(date(), "Format data"))
-labels = system(paste("infoseq -auto -nocolumns -only -noheading -name ",assembly),intern=TRUE)
+# labels = system(paste("infoseq -auto -nocolumns -only -noheading -name ",assembly),intern=TRUE)
+labels = system(paste("grep -Po \">[^ ]+\" ",assembly,"|sed 's/>//' "),intern=TRUE)
 lengths = as.numeric(system(paste("infoseq -auto -nocolumns -only -noheading -length ",assembly),intern=TRUE))
 colnames(dist_matrix) = labels
 
