@@ -201,7 +201,7 @@ def get_cmd():
     #parser.add_argument("-c", "--conta", action="store", dest="conta", help="multifasta of the contaminant species training set")
     #parser.add_argument("-r", "--host", action="store", dest="host", help="optional multifasta of the host species training set")
     #parser.add_argument("-n", "--n_max_freq_in_windows", action="store", type=float, dest="n_max_freq_in_windows", default=0.4, help="maximum proportion of N tolerated in a window to compute the microcomposition anyway [0~1]. Too much 'N's will reduce the number of kmer counts and will artificially coarse the resolution of the frequencies. If your assembly contains many stretches of 'N's, consider rising this parameter and shortening the windows step in order to allow computation and signal in the output, it might cost you computational time though. Windows which do not meet this criteria will be affected a distance of 'nan'")
-    parser.add_argument("-k", "--lgMot", action="store", dest="k", type="int", default=4, help="word wise / kmer lenght / k [default:%default]")
+    parser.add_argument("-k", "--lgMot", action="store", dest="k", type=int, default=4, help="word wise / kmer length / k [default:%default]")
     #parser.add_argument("-w", "--windows_size", action="store", dest="windows_size", type=int, help="Sliding windows size (bp)[default:%default]")
     #parser.add_argument("-t", "--windows_step", action="store", dest="windows_step", type=int, help="Sliding windows step size(bp)[default:%default]")
     parser.add_argument("-s", "--strand", action="store", dest="strand", default="both", choices=["both", "plus", "minus"], help="strand used to compute microcomposition. leading, lagging ou both [default:%default]")
@@ -210,9 +210,6 @@ def get_cmd():
     parser.add_argument("-o", "--out", action="store", dest="out_file", default="phyloligo.out", help="output file[default:%default]")
 
     params = parser.parse_args()
-    if not 0 <= params.n_max_freq_in_windows <= 1.0:
-        print("Errorm parameter '-n', '-n_max_freq_in_windows' should be between 0 and 1", file=sys.stderr)
-        sys.exit(1)
     return params
 
 def main():
