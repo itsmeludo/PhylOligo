@@ -199,7 +199,7 @@ clade_select<-function(phy, title = TRUE, subbg = "white", return.tree = FALSE,e
 #     user_decision=1
 #     subset=1
 #     while (substr(user_decision, 1, 1) != "E"){
-#         g=tree_zoom(tree,return.tree=TRUE,type='c',use.edge.length=FALSE,cex=0.5,font=2,edge_size=edge_size,edge_label=edge_lab)
+#         g=tree_zoom(tree,return.tree=TRUE,type='c',use.edge.length=branchlength,cex=0.5,font=2,edge_size=edge_size,edge_label=edge_lab)
 #         user_decision = readline("Do you want to export this contig subset as fasta? (y)es, export it. (n)o, discard this selection and let me select another node. (E)xit, I'm done with the selection and exports.")
 #         if (substr(user_decision, 1, 1) == "y"){
 #             system(paste("samtools faidx ",assembly," ",paste(g$tip.label, collapse=" "), " > ",outfile,"_",subset,".fa",sep="" ))
@@ -219,7 +219,7 @@ outersect <- function(x, y, ...) {
 
 
 interactive_mode=function(){
-    clade_select(tree,return.tree=TRUE,type='c',use.edge.length=FALSE,font=2,edge_size=edge_size,edge_label=edge_lab)
+    clade_select(tree,return.tree=TRUE,type='c',use.edge.length=branchlength,font=2,edge_size=edge_size,edge_label=edge_lab)
 }
 
 spec <- matrix(c(
@@ -248,7 +248,7 @@ if (is.null(opt[["verbose"]])) {
 }
 
 outfile = ifelse(is.null(opt[["outfile"]]), outfile <- "phyloligo.out" , outfile <-opt[["outfile"]])
-branchlength = ifelse(is.null(opt[["branchlength"]]), branchlength <- "FALSE" , branchlength <-opt[["branchlength"]])
+branchlength = ifelse(is.null(opt[["branchlength"]]), branchlength <- "FALSE" , branchlength <-"TRUE")
 keep_perc = ifelse(is.null(opt[["keep_perc"]]), keep_perc <- 5 , keep_perc <-opt[["keep_perc"]])
 min_perc = ifelse(is.null(opt[["min_perc"]]), min_perc <- 0.5 , min_perc <-opt[["min_perc"]])
 max_perc = ifelse(is.null(opt[["max_perc"]]), max_perc <- 30 , max_perc <-opt[["max_perc"]])
@@ -360,7 +360,7 @@ X11(width=12,height=10) # external display when script is launched with Rscript 
 
 edge_size=edge_size/sum(edge_size)*100*40
 
-plot(tree,use.edge.length=FALSE,type="c",show.tip.label=FALSE,edge.width=edge_size)
+plot(tree,use.edge.length=branchlength,type="c",show.tip.label=FALSE,edge.width=edge_size)
 #plot(tree,use.edge.length=FALSE,type="c",show.tip.label=FALSE,edge.width=edge_size/sum(edge_size)*100*15,edge.color = colfunc(100)[round(edge_perc)])
 edgelabels(text=edge_lab,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5)
 
@@ -369,7 +369,7 @@ if (opt[["verbose"]]) print(paste(date(), "Indexing fasta file"))
 system(paste("samtools faidx",assembly))
 
 if (opt[["verbose"]]) print(paste(date(), "Entering interactive mode of clade selection to constitute learning sets for contalocate"))
-clade_select(tree,return.tree=TRUE,type='c',use.edge.length=FALSE,font=2,edge_size=edge_size,edge_label=edge_lab)
+clade_select(tree,return.tree=TRUE,type='c',use.edge.length=branchlength,font=2,edge_size=edge_size,edge_label=edge_lab)
 
 # Export clade-corresponding contig in fasta format
 
