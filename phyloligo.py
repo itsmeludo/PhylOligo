@@ -219,7 +219,7 @@ def main():
     params = get_cmd()
 
     #print("A genome was provided")
-    res = parallel_distance(params.genome, params.thread_max, params.dist, params.k, params.strand)
+    res = parallel_distance(params.genome, params.threads_max, params.dist, params.k, params.strand)
     print(res)
     numpy.savetxt(params.out_file, res, delimiter="\t")
     sys.exit(0)
