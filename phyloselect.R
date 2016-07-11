@@ -174,7 +174,9 @@ clade_select<-function(phy, title = TRUE, subbg = "white", return.tree = FALSE,e
           dev.off(devsub)
           if (user_decision == "y")
             #return(subtree)
-            system(paste("samtools faidx ",assembly," \"",paste(subtree$tip.label, collapse=" "), "\" > ",outfile,"_",subset,".fa",sep="" ))
+            cmd=paste("samtools faidx ",assembly," '",paste(paste(tr$tip.label,collapse="' '",sep=""),"'",sep=""), " > ",outfile,"_",subset,".fa",sep="" )
+            print(cmd)
+            system(cmd)
 #             plots à join colored mapping  to each selected clade:
             pdf(file=paste(outfile,"_",subset,".pdf",sep=""),width=16,height=9)
                 plot(phy,use.edge.length=lastPP$use.edge.length,type=lastPP$type,show.tip.label=lastPP$show.tip.label,edge.width=edge_size_tree,edge.color=edge_selected_color)
@@ -191,7 +193,7 @@ clade_select<-function(phy, title = TRUE, subbg = "white", return.tree = FALSE,e
     }
   }
 }
-
+#  interactive_mode()
 
 # print("toto")
 
@@ -219,7 +221,12 @@ outersect <- function(x, y, ...) {
 
 
 interactive_mode=function(){
-    clade_select(tree,return.tree=TRUE,type='c',use.edge.length=FALSE,font=2,edge_size=edge_size,edge_label=edge_lab)
+    library(ape)
+    X11(width=12,height=10)
+    edge_size=edge_size/sum(edge_size)*100*40
+    plot.phylo(tree,use.edge.length=branchlength,type="c",show.tip.label=FALSE,edge.width=edge_size)
+    edgelabels(text=edge_lab,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5)
+    clade_select(tree,return.tree=TRUE,type='c',use.edge.length=branchlength,font=2,edge_size=edge_size,edge_label=edge_lab)
 }
 
 spec <- matrix(c(
@@ -360,7 +367,7 @@ X11(width=12,height=10) # external display when script is launched with Rscript 
 
 edge_size=edge_size/sum(edge_size)*100*40
 
-plot(tree,use.edge.length=FALSE,type="c",show.tip.label=FALSE,edge.width=edge_size)
+plot(tree,use.edge.length=branchlength,type="c",show.tip.label=FALSE,edge.width=edge_size)
 #plot(tree,use.edge.length=FALSE,type="c",show.tip.label=FALSE,edge.width=edge_size/sum(edge_size)*100*15,edge.color = colfunc(100)[round(edge_perc)])
 edgelabels(text=edge_lab,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5)
 
@@ -368,14 +375,24 @@ if (opt[["verbose"]]) print(paste(date(), "Indexing fasta file"))
 ###manually selecting the subtree of the putative contaminant:
 system(paste("samtools faidx",assembly))
 
+
+if (opt[["verbose"]]) print(paste(date(), "Dumping the R environment"))
+
+if (!is.null(opt[["dump_R_session"]])) {
+  save.image(file=paste(outfile,"_phyloligo_dump.RData",sep=""));
+}
+
 if (opt[["verbose"]]) print(paste(date(), "Entering interactive mode of clade selection to constitute learning sets for contalocate"))
-clade_select(tree,return.tree=TRUE,type='c',use.edge.length=FALSE,font=2,edge_size=edge_size,edge_label=edge_lab)
+clade_select(tree,return.tree=TRUE,type='c',use.edge.length=branchlength,font=2,edge_size=edge_size,edge_label=edge_lab)
 
 # Export clade-corresponding contig in fasta format
 
 # paste((g$tip.label),collapse= " ")
 
-if (opt[["verbose"]]) print(paste(date(), "Dumping the R object. To reuse it in the future, open R, load this file with load(\"file\") and call the function interactive_mode(). Beware that files and former selections might get overwritten."))
+if (opt[["verbose"]]) print(paste(date(), "Dumping the R environment. To reuse it in the future, open R, load this file with load(\"file\") and call the function interactive_mode(). Beware that files and former selections might get overwritten."))
 if (!is.null(opt[["dump_R_session"]])) {
-  save.image(file=paste(outfile,"_phyloligo_dump.RData"));
+  save.image(file=paste(outfile,"_phyloligo_dump.RData",sep=""));
 }
+
+
+# interactive_mode()
