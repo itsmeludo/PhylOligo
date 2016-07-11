@@ -210,9 +210,6 @@ def get_cmd():
     parser.add_argument("-o", "--out", action="store", dest="out_file", default="phyloligo.out", help="output file[default:%default]")
 
     params = parser.parse_args()
-    #if not 0 <= params.n_max_freq_in_windows <= 1.0:
-        #print("Errorm parameter '-n', '-n_max_freq_in_windows' should be between 0 and 1", file=sys.stderr)
-        #sys.exit(1)
     return params
 
 def main():
