@@ -14,7 +14,7 @@ Regroup contigs by compositional similarity on a tree and explore branching
 ---------------------------------------------------------------------------
 
 ```bash
-phyloselect.R -i genome.Eucl.mat -a genome.fasta
+phyloselect.R -d -v  -i genome.Eucl.mat -a genome.fasta -o genome_conta
 ```
 
 
