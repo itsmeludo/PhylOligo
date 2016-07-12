@@ -21,8 +21,29 @@ phyloselect.R -i genome.Eucl.mat -a genome.fasta
 Install
 -------
 
-Dependencies
+Dependencies:
 * Python 3.x
- * test
+ * BioPython
+ * numpy
+ * Cython
 * R 3.x
+ * ape
+ * getopt
+ * gtools
+
+In the Bash/Shell, as root/admin if wanted installed globally.
+Install python3 and the latest R version [according to your system](https://xkcd.com/1654/) 
+```Bash
+apt-get install python3-dev python3-setuptools r-base
+easy_install3 -U setuptools
+pip3 install biopython 
+pip3 install cython
+pip3 install numpy
+```
+
+
+in R, as root or user
+```R
+install.packages(c("ape","getopt","gtools"))
+```
 
