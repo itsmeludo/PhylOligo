@@ -8,6 +8,15 @@ Generate the all-by-all contig distance matrix
 ```bash
 phyloligo.py -d Eucl -i genome.fasta -o genome.Eucl.mat -u 64
 ```
+Parameters:
+* -i	--assembly    multifasta of the genome assembly
+* -k	--lgMot       word length / kmer length / k
+* -s	--strand      Strand used to compute microcomposition. "both", "plus" or "minus"
+* -d	--distance    How to compute distance between two signatures "KL", "Eucl" or "JSD" KL: Kullback-Leibler, Eucl : Euclidean, JSD : Jensen-Shannon divergence
+* -u	--cpu         How many parallel threads to use for microcomposition computation
+* -o    --out         Output file
+* -h    --help        Exactly what it says
+ 
 
 Regroup contigs by compositional similarity on a tree and explore branching
 ---------------------------------------------------------------------------
@@ -16,33 +25,62 @@ Regroup contigs by compositional similarity on a tree and explore branching
 phyloselect.R -d -v  -i genome.Eucl.mat -a genome.fasta -o genome_conta
 ```
 
+Parameters:
+* -i    --matrix            All-by-all contig distance matrix, tab separated (required)
+* -a    --assembly          Multifasta file of the contigs (required)
+* -t    --tree_method       Tree building method (optional), by default NJ. No other option implemented ATM
+* -d    --dump_R_session    Should the R environment saved for later exploration? the filename will be generated from the outfile parameter or its default value
+* -g    --max_per           Max edge assembly length percentage displayed (%)
+* -l    --min_perc          Min edge assembly length percentage displayed (%)
+* -k    --keep_perc         Ratio of out-of-range percentages to display (%)
+* -o    --outfile           Outfile name, default:phyloligo.out
+* -b    --branchlength      Use the branch length information  for tree display if invoked
+* -v    --verbos            Say what the program do.
+* -h    --help              Yep, does that.
+
+
 
 Install
 -------
 
-Dependencies:
-* Python 3.x
- * BioPython
- * numpy
- * Cython
-* R 3.x
- * ape
- * getopt
- * gtools
+* Dependencies:
+    * Python 3.x
+        * [BioPython](biopython.org)
+        * [Numpy](numpy.org)
+        * [Cython](http://cython.org/)
+    * R 3.x
+        * [ape](http://ape-package.ird.fr/)
+        * [getopt](https://cran.r-project.org/web/packages/getopt/getopt.pdf)
+        * [gtools](https://cran.r-project.org/web/packages/gtools/index.html)
+    * [EMBOSS](http://emboss.sourceforge.net/download/)
+    * [Samtools](http://www.htslib.org/)
+
+* Install python3, the latest R version, EMBOSS and Samtools [according to your system](https://xkcd.com/1654/) 
 
 In the Bash/Shell, as root/admin if wanted installed globally.
-Install python3 and the latest R version [according to your system](https://xkcd.com/1654/) 
 ```Bash
-apt-get install python3-dev python3-setuptools r-base
+#Ubuntu/Debian-based
+apt-get install python3-dev python3-setuptools r-base emboss samtools
 easy_install3 -U setuptools
 pip3 install biopython 
 pip3 install cython
 pip3 install numpy
 ```
 
-
 in R, as root or user
 ```R
 install.packages(c("ape","getopt","gtools"))
 ```
 
+* clone the repo
+
+```Bash
+https://github.com/itsmeludo/PhylOligo.git
+```
+
+* Link the programs into a directory listed in your $PATH
+
+```Bash
+cd PhylOligo
+sudo ln -s `pwd`/{phyloligo.py,phyloselect.R} /usr/local/bin/
+```
