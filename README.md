@@ -14,6 +14,8 @@ Parameters:
 * -s	--strand      Strand used to compute microcomposition. "both", "plus" or "minus"
 * -d	--distance    How to compute distance between two signatures "KL", "Eucl" or "JSD" KL: Kullback-Leibler, Eucl : Euclidean, JSD : Jensen-Shannon divergence
 * -u	--cpu         How many parallel threads to use for microcomposition computation
+* -g    --granularity Factor to refine the granularity of parallel threads. The higher the factor, the greater the number of smaller bins
+  
 * -o    --out         Output file
 * -h    --help        Exactly what it says
  

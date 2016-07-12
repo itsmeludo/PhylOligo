@@ -26,6 +26,9 @@ import multiprocessing
 from collections import Counter
 from itertools import product
 
+
+
+
 numpy.seterr(divide='ignore', invalid='ignore')
 
 def KL(a,b):
@@ -174,7 +177,12 @@ def parallel_distance(genome, nb_thread, dist, ksize, strand):
         for j in range(i+1,len(records)):
             args.append((i, j, dist, ksize, strand))
     #print(args)
-    parallel_args_set = chunkitize(args, nb_thread) 
+    #adds a finer granularity for jobs dispatch to allow backfill of cores after the shorter jobs among the "nb_thread" initially requested finished and the longest still run on few cores.
+    if (int(args.len/nb_thread) >= nb_thread*nb_thread*parallel_core_granularity_factor):
+        parallel_args_set = chunkitize(args, int(nb_thread*(nb_thread/2)*parallel_core_granularity_factor))
+    else:
+        # if there is only a few fasta entries, adding granularity will cost time
+        parallel_args_set = chunkitize(args, nb_thread) 
     #print(parallel_args_set)
     pool = multiprocessing.Pool(processes=nb_thread)
     res = pool.map(pairwise_distance, parallel_args_set)
@@ -207,6 +215,7 @@ def get_cmd():
     parser.add_argument("-s", "--strand", action="store", dest="strand", default="both", choices=["both", "plus", "minus"], help="strand used to compute microcomposition. [default:%default]")
     parser.add_argument("-d", "--distance", action="store", dest="dist", default="Eucl", choices=["KL", "Eucl", "JSD"], help="how to compute distance between two signatures : KL: Kullback-Leibler, Eucl : Euclidean[default:%default], JSD : Jensen-Shannon divergence")
     parser.add_argument("-u", "--cpu", action="store", dest="threads_max", type=int, default=4, help="how many threads to use for windows microcomposition computation[default:%default]")
+    parser.add_argument("-g", "--granularity", action="store", dest="parallel_core_granularity_factor", type=float, default=1, help="Factor to refine the granularity of parallel threads. The higher the factor, the greater the number of smaller bins.[default:%default]")
     parser.add_argument("-o", "--out", action="store", dest="out_file", default="phyloligo.out", help="output file[default:%default]")
 
     params = parser.parse_args()
@@ -214,7 +223,8 @@ def get_cmd():
 
 def main():
     params = get_cmd()
-
+    global parallel_core_granularity_factor
+    parallel_core_granularity_factor=1
     #print("A genome was provided")
     res = parallel_distance(params.genome, params.threads_max, params.dist, params.k, params.strand)
     print(res)
