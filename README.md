@@ -1,7 +1,6 @@
 # PhylOligo
-===========
+Bioinformatics / Genomics 
 Explore oligonucleotide composition similarity between assembly contigs or scaffolds to detect contaminant DNA.
-
 
 
 Generate the all-by-all contig distance matrix
