@@ -16,3 +16,13 @@ Regroup contigs by compositional similarity on a tree and explore branching
 ```
 phyloselect.R -i phyloligo.out -a TH12-rn_prefix.bin
 ```
+
+
+Install
+-------
+
+Dependencies
+* Python 3.x
+** test
+* R 3.x
+
