@@ -178,7 +178,7 @@ def parallel_distance(genome, nb_thread, dist, ksize, strand):
             args.append((i, j, dist, ksize, strand))
     #print(args)
     #adds a finer granularity for jobs dispatch to allow backfill of cores after the shorter jobs among the "nb_thread" initially requested finished and the longest still run on few cores.
-    if (int(args.len/nb_thread) >= nb_thread*nb_thread*parallel_core_granularity_factor):
+    if (int(len(args)/nb_thread) >= nb_thread*nb_thread*parallel_core_granularity_factor):
         parallel_args_set = chunkitize(args, int(nb_thread*(nb_thread/2)*parallel_core_granularity_factor))
     else:
         # if there is only a few fasta entries, adding granularity will cost time
