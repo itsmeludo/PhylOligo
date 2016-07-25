@@ -1,5 +1,5 @@
-#!/usr/bin/Rscript
-
+#!/usr/bin/env Rscript
+ 
 ### Author: Ludovic V. Mallet, PhD, Frank Cerutti
 ### 2016.06.22
 ### licence: GPLv3
