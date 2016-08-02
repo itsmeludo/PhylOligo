@@ -15,7 +15,6 @@ Parameters:
 * -d	--distance    How to compute distance between two signatures "KL", "Eucl" or "JSD" KL: Kullback-Leibler, Eucl : Euclidean, JSD : Jensen-Shannon divergence
 * -u	--cpu         How many parallel threads to use for microcomposition computation
 * -g    --granularity Factor to refine the granularity of parallel threads. The higher the factor, the greater the number of smaller bins
-  
 * -o    --out         Output file
 * -h    --help        Exactly what it says
  
@@ -40,6 +39,7 @@ Parameters:
 * -v    --verbos            Say what the program do.
 * -h    --help              Yep, does that.
 
+note: PhyloSelect uses the library Ape and its interactive clade selection function on a tree plot with the mouse. X11 is therefore required. If the program has to run on a server -typically for memory reasons- please use the -X option of ssh to allow X11 forwarding.
 
 
 Install
@@ -56,6 +56,7 @@ Install
         * [gtools](https://cran.r-project.org/web/packages/gtools/index.html)
     * [EMBOSS](http://emboss.sourceforge.net/download/)
     * [Samtools](http://www.htslib.org/)
+    * X11 (only required to run phyloselect)
 
 * Install python3, the latest R version, EMBOSS and Samtools [according to your system](https://xkcd.com/1654/) 
 
@@ -77,8 +78,9 @@ install.packages(c("ape","getopt","gtools"))
 * clone the repo
 
 ```Bash
-https://github.com/itsmeludo/PhylOligo.git
+git clone https://github.com/itsmeludo/PhylOligo.git
 ```
+or download it from https://github.com/itsmeludo/PhylOligo
 
 * Link the programs into a directory listed in your $PATH
 
