@@ -36,6 +36,7 @@ Parameters:
 * -k    --keep_perc         Ratio of out-of-range percentages to display (%)
 * -o    --outfile           Outfile name, default:phyloligo.out
 * -b    --branchlength      Use the branch length information  for tree display if invoked
+* -w    --branchwidth       Branch width factor [40]",
 * -v    --verbos            Say what the program do.
 * -h    --help              Yep, does that.
 

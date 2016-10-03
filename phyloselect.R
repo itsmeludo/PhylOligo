@@ -223,7 +223,7 @@ outersect <- function(x, y, ...) {
 interactive_mode=function(){
     library(ape)
     X11(width=12,height=10)
-    edge_size=edge_size/sum(edge_size)*100*40
+    edge_size=edge_size/sum(edge_size)*100*branchwidth
     plot.phylo(tree,use.edge.length=branchlength,type="c",show.tip.label=FALSE,edge.width=edge_size)
     edgelabels(text=edge_lab,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5)
     clade_select(tree,return.tree=TRUE,type='c',use.edge.length=branchlength,font=2,edge_size=edge_size,edge_label=edge_lab)
@@ -241,6 +241,7 @@ spec <- matrix(c(
   'keep_perc'           , 'k', 2, "double",   "ratio of out-of-range percentages to display (%)",
   'outfile'     , 'o', 2, "character", "outfile name, default:phyloligo.out",
   'branchlength'           , 'b', 0, "logical",   "display branch length",
+  'branchwidth'           , 'w', 2, "double",   "Branch width factor [40]",
   'verbose'           , 'v', 0, "logical",   "say what the program do. Not implemented yet.",
   'help'           , 'h', 0, "logical",   "this help"
 ),ncol=5,byrow=T)
@@ -261,6 +262,7 @@ branchlength = ifelse(is.null(opt[["branchlength"]]), branchlength <- FALSE , br
 keep_perc = ifelse(is.null(opt[["keep_perc"]]), keep_perc <- 5 , keep_perc <-opt[["keep_perc"]])
 min_perc = ifelse(is.null(opt[["min_perc"]]), min_perc <- 0.5 , min_perc <-opt[["min_perc"]])
 max_perc = ifelse(is.null(opt[["max_perc"]]), max_perc <- 30 , max_perc <-opt[["max_perc"]])
+branchwidth = ifelse(is.null(opt[["branchwidth"]]), branchwidth <- 40 , branchwidth <-opt[["branchwidth"]])
 
 if ( system("which infoseq",intern=TRUE) == ""){
   print("Please Install EMBOSS")
@@ -367,7 +369,7 @@ if (opt[["verbose"]]) print(paste(date(), "Computing Tree plot"))
 X11(width=12,height=10) # external display when script is launched with Rscript command
 # par(ljoin = 1, lend = 1)
 
-edge_size=edge_size/sum(edge_size)*100*40
+edge_size=edge_size/sum(edge_size)*100*branchwidth
 
 plot(tree,use.edge.length=branchlength,type="c",show.tip.label=FALSE,edge.width=edge_size)
 #plot(tree,use.edge.length=FALSE,type="c",show.tip.label=FALSE,edge.width=edge_size/sum(edge_size)*100*15,edge.color = colfunc(100)[round(edge_perc)])
