@@ -229,6 +229,8 @@ interactive_mode=function(){
     clade_select(tree,return.tree=TRUE,type='c',use.edge.length=branchlength,font=2,edge_size=edge_size,edge_label=edge_lab)
 }
 
+# branchlength=FALSE
+
 spec <- matrix(c(
   'matrix'         , 'i', 1, "character", "all-by-all contig distance matrix, tab separated (required)",
   'assembly'         , 'a', 1, "character", "multifasta file of the contigs (required)",
@@ -255,7 +257,7 @@ if (is.null(opt[["verbose"]])) {
 }
 
 outfile = ifelse(is.null(opt[["outfile"]]), outfile <- "phyloligo.out" , outfile <-opt[["outfile"]])
-branchlength = ifelse(is.null(opt[["branchlength"]]), branchlength <- "FALSE" , branchlength <-"TRUE")
+branchlength = ifelse(is.null(opt[["branchlength"]]), branchlength <- FALSE , branchlength <-TRUE)
 keep_perc = ifelse(is.null(opt[["keep_perc"]]), keep_perc <- 5 , keep_perc <-opt[["keep_perc"]])
 min_perc = ifelse(is.null(opt[["min_perc"]]), min_perc <- 0.5 , min_perc <-opt[["min_perc"]])
 max_perc = ifelse(is.null(opt[["max_perc"]]), max_perc <- 30 , max_perc <-opt[["max_perc"]])
@@ -277,7 +279,7 @@ stopifnot(system("which infoseq",intern=TRUE,ignore.stdout = TRUE, ignore.stderr
 dist_matrix_file = opt[["matrix"]]
 tree_method = opt[["tree_method"]]
 assembly = opt[["assembly"]]
-branchlength = opt[["branchlength"]]
+# branchlength = opt[["branchlength"]]
 
 
 
