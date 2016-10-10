@@ -129,7 +129,8 @@ def frequency (seq, ksize=4, strand="both"):
     #print(word_count)
     if(word_count > 0):
         ret=list()
-        word_universe=list(map("".join,(list(product(("C","G","A","T"),("C","G","A","T"),("C","G","A","T"),("C","G","A","T"))))))
+        letter_list = list(product(("C","G","A","T"), repeat=ksize))
+        word_universe = list(map("".join,letter_list))
         for w in word_universe:
             if(c.get(w) != None):
                 ret.append(c.get(w)/word_count)
