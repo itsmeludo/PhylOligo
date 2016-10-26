@@ -14,6 +14,8 @@ Garanteed with misatkes. <- Including this one.
   #numpy
   #cython
   
+from scoop import futures
+  
 import os, sys, re, math, argparse
 import time
 import logging
@@ -21,100 +23,97 @@ import logging
 from Bio import SeqIO
 from Bio.Seq import Seq
 
-import numpy as np
 import multiprocessing
 from collections import Counter
 from itertools import product
 
 ## clustering
+import numpy as np
 from sklearn.metrics.pairwise import pairwise_distances
 #import hdbscan
+from scipy.stats import entropy
+from numpy.linalg import norm
 
 np.seterr(divide='ignore', invalid='ignore')
 
-def KL(a,b):
+#### DISTANCES ####
+
+def KL(a, b):
     """ compute the KL distance
     """
     d = a * np.log(a/b)
     d[np.isnan(d)]=0 
     d[np.isinf(d)]=0
-    return (np.sum(d))*10000
+    res = np.sum(d)
+    #if res < 0:
+        #print(a, b, res)
+    return res
 
-def Eucl(a,b):
+def Eucl(a, b):
     """ compute Euclidean distance
     """
     d = pow(a-b,2)
     d[np.isnan(d)]=0
     d[np.isinf(d)]=0
-    return np.sqrt(np.sum(d))*10000
+    return np.sqrt(np.sum(d))
 
-def JSD(a,b):
+def JSD2(a, b):
     """ Compute JSD distance
     """
-    h = (a + b)/2
-    d = (KL(a,h)/2)+(KL(b,h)/2)
+    h = 0.5 * (a + b)
+    d = 0.5 * (KL(a, h) + KL(b, h))
     return d
 
-def vector_to_matrix(profile):
-    """ transform a vector of profile to a matrix
-    """
-    return list((zip(*(iter(profile),)*int(math.sqrt(len(profile))))))
+def JSD(P, Q):
+    _P = P / norm(P, ord=1)
+    _Q = Q / norm(Q, ord=1)
+    _M = 0.5 * (_P + _Q)
+    return 0.5 * (entropy(_P, _M) + entropy(_Q, _M))
 
-dist_methods = {
-    "KL": KL,
-    "Eucl": Eucl,
-    "JSD": JSD,
-    }
-
-def chunkitize(toseparate, nb_chunks):
-    """ separate a list into sublist of the same size
+def compute_distances(frequencies, metric="Eucl", n_jobs=1):
+    """ compute pairwises distances
     
-    Parameters:
-    -----------
-    toseparate: list
-        to be cut into sublists
-    nb_chunks: int
-        the number of sublists
+    Parameters
+    ----------
+    frequencies: np.array
+        a list of frequencies, each row corresponding to a sample each column to a "word"
+    metric: string
+        distance method to use ('JSD', 'Eucl', 'KL')
+    n_jobs: int
+        number of parallel job to execute
     
     Return:
     -------
-    out: list
-        a list of n=nb_chunks sublist
-    
-    >>> chunkitize([1, 2, 3, 4, 5], 2)
-    ... [[1, 2], [3, 4, 5]]
+    distances: np.array
+        (n_samples, n_samples) distance matrix
     """
-    chunk_size= int((len(toseparate) / float(nb_chunks)))
-    out = [toseparate[chunk_size*i:(chunk_size*i+chunk_size) if (i!=nb_chunks-1) else len(toseparate)] for i in range(0, nb_chunks)]
-    return out
-
-
-def select_strand (seq, strand="both"):
-    """ choose which strand to work on
-    
-    Parameters:
-    -----------
-    seq: Seq
-        a str object containing a nucleotide sequence, that can be converted into a Bio.Seq object
-    strand: string
-        select wich strand to use
-    
-    Return:
-    -------
-    seq: string
-        the sequence strand
-    """
-    Bioseq_record = Seq(seq)
-    if (strand == "both"):
-        new_seq = str(str(seq)+str(Bioseq_record.reverse_complement()))
-    elif (strand == "minus"):
-        new_seq = str(Bioseq_record.reverse_complement())
-    elif (strand == "plus"):
-        new_seq = str(seq)
+    if metric == "Eucl":
+        # use euclidean distance of sklearn
+        distances = pairwise_distances(frequencies, metric="euclidean", n_jobs=n_jobs)
+        distances[np.isnan(distances)]=0
+        distances[np.isinf(distances)]=0
+        distances *= 10000
+    elif metric == "EuclLoc":
+        distances = pairwise_distances(frequencies, metric=Eucl, n_jobs=n_jobs)
+    elif metric == "JSD":
+        distances = pairwise_distances(frequencies, metric=JSD, n_jobs=n_jobs)
+    #elif metric == "KL":        
+        #distances = pairwise_distances(frequencies, metric=KL, n_jobs=n_jobs)
+        #with open("dump.txt", "w") as outf:
+            #for i in range(len(frequencies)):
+                #for j in range(i+1, len(frequencies)):
+                    #d = KL(frequencies[i], frequencies[j])
+                    #if d < 0:
+                        #print(i, j, d)
+                        #outf.write("{}\n{}\n".format(" ".join([str(val) for val in frequencies[i]]), 
+                                                     #" ".join([str(val) for val in frequencies[j]])))
+                        #sys.exit(1)
     else:
-        print("Error, strand parameter of selectd_strand() should be choose from {'both', 'minus', 'plus'}", file=sys.stderr)
+        print("Error, unknown method {}".format(metric), file=sys.stderr)
         sys.exit(1)
-    return new_seq
+    return distances
+
+#### frequencies computation ####
 
 def cut_sequence(seq, ksize):
     """ cut sequence in words of size k
@@ -171,10 +170,10 @@ def count2freq(count_words, kword_count, ksize):
             else:
                 features.append(0)
     else:
-        features = np.array([np.inf for kword in letter_list])
-    return features
+        features = [np.inf for kword in letter_list]
+    return np.array(features)
 
-def frequency(seq, ksize=4, strand="both"):
+def compute_frequency(seq, ksize=4, strand="both"):
     """ compute kmer frequency, ie feature vector of each read
     
     Parameters:
@@ -200,73 +199,27 @@ def frequency(seq, ksize=4, strand="both"):
     features = count2freq(count_words, kword_count, ksize)
     return features
 
-
-#### OLD CODE BELOW #### TODO REMOVE AFTER TESTING ###
-
-def pairwise_distances_old (args):
-    """ compute pairwise distance
-    """
-    res=[]
-    for i, j, dist, ksize, strand in args:
-        res.append((i, j, dist(frequency(str(records[i].seq), ksize, strand), 
-                               frequency(str(records[j].seq), ksize, strand))))
-    return res
-
-
-def parallel_distance_old(genome, nb_thread, dist, ksize, strand):
-    """ compute distance on multithread
+def frequency_pack(params):
+    """ compute kmer frequency, ie feature vector of each read
     
     Parameters:
     -----------
-    genome: string
-        path to the genome file
-    nb_thread: int
-        number of parallel instance
-    dist: string
-        distance method to use ('JSD', 'Eucl', 'KL')
+    seq: string
+        The nucleotide sequence
     ksize: int
-        kmer size to use
+        The size of the kmer
     strand: string
-        select genome strand ('both', 'plus', 'minus')
+        which strand to used
         
     Return:
     -------
-    symmetrical_distance_matrix: numpy.array
-        the matrix storing pairwize distances
+    features: np.array
+        a feature vector of the frequency of each word in the read
     """
-    args=[]
-    dist_pairs=[]
-    global records
-    records = list(SeqIO.parse(genome, "fasta"))
-    for i in range(len(records)):
-        for j in range(i+1,len(records)):
-            args.append((i, j, dist_methods[dist], ksize, strand))
-    #print(args)
-    #adds a finer granularity for jobs dispatch to allow backfill of cores after the shorter jobs among the "nb_thread" initially requested finished and the longest still run on few cores.
-    if (int(len(args)/nb_thread) >= nb_thread*nb_thread*parallel_core_granularity_factor):
-        parallel_args_set = chunkitize(args, int(nb_thread*(nb_thread/2)*parallel_core_granularity_factor))
-    else:
-        # if there is only a few fasta entries, adding granularity will cost time
-        parallel_args_set = chunkitize(args, nb_thread) 
-    #print(parallel_args_set)
-    pool = multiprocessing.Pool(processes=nb_thread)
-    res = pool.map(pairwise_distances_old, parallel_args_set)
-    pool.close()
-    pool.join()
-    symmetrical_distance_matrix = np.zeros((len(records),len(records)))
-    for i in res:
-        for g in i:
-            dist_pairs.append(g)
-            symmetrical_distance_matrix[(g[0],g[1])]=g[2]
-            symmetrical_distance_matrix[(g[1],g[0])]=g[2]
-    #print(dist_pairs)
-    #print(symmetrical_distance_matrix)
-    
-    return symmetrical_distance_matrix
+    features = compute_frequency(*params)
+    return features
 
-#### OLD CODE ABOVE #### TODO REMOVE AFTER TESTING ###
-
-def compute_frequencies(genome, nb_thread, ksize, strand):
+def compute_frequencies(genome, nb_thread, ksize, strand, chunksize):
     """ compute frequencies
     
     Parameters:
@@ -285,47 +238,86 @@ def compute_frequencies(genome, nb_thread, ksize, strand):
     frequencies: numpy.array
         the samples x features matrix storing NT composition of fasta sequences
     """
-    
     # compute frequencies # TODO parallelization of frequencies computation
     frequencies = list()
-    for record in  SeqIO.parse(genome, "fasta"):
-        frequencies.append(frequency(str(record.seq), ksize, strand))
+    for seqchunk in read_seq_chunk(genome, chunksize, ksize, strand):
+        chunkfreq = futures.map(frequency_pack, seqchunk)
+        frequencies.extend(chunkfreq)
+                           
+    #for record in  SeqIO.parse(genome, "fasta"):
+        #frequencies.append(frequency(str(record.seq), ksize, strand))
     
     return np.array(frequencies)
 
-def compute_distances(frequencies, metric="Eucl", n_jobs=1):
-    """ compute pairwises distances
+#### Sequences ####
+
+def read_seq_chunk(genome, chunksize, ksize, strand):
+    """ read a first chunk of fasta sequences to be processed
     
-    Parameters
-    ----------
-    frequencies: np.array
-        a list of frequencies, each row corresponding to a sample each column to a "word"
-    metric: string
-        distance method to use ('JSD', 'Eucl', 'KL')
-    n_jobs: int
-        number of parallel job to execute
+    Parameters:
+    -----------
+    genome: string
+        path to the genome file
+    chunksize: int
+        the number of fasta entries to read
+        
+    Return:
+    -------
+    seqchunk: list
+        a list of SeqRecord 
+    """
+    seqchunk = list()
+    for record in SeqIO.parse(genome, "fasta"):
+        seqchunk.append((str(record.seq), ksize, strand))
+        if len(seqchunk) == chunksize:
+            yield seqchunk
+            seqchunk = list()
+
+def number_of_sequences(genome):
+    """ open the fasta file and count the number of sequences
+    
+    Parameters:
+    -----------
+    genome: string
+        path to the genome file
+        
+    Return:
+    -------
+    cnt: int
+        the number of sequences
+    """
+    cnt = 0
+    for record in SeqIO.parse(genome, "fasta"):
+        cnt += 1
+    return cnt
+
+def select_strand (seq, strand="both"):
+    """ choose which strand to work on
+    
+    Parameters:
+    -----------
+    seq: Seq
+        a str object containing a nucleotide sequence, that can be converted into a Bio.Seq object
+    strand: string
+        select wich strand to use
     
     Return:
     -------
-    distances: np.array
-        (n_samples, n_samples) distance matrix
+    seq: string
+        the sequence strand
     """
-    if metric == "Eucl":
-        # use euclidean distance of sklearn
-        distances = pairwise_distances(frequencies, metric="euclidean", n_jobs=n_jobs)
-        distances[np.isnan(distances)]=0
-        distances[np.isinf(distances)]=0
-        distances *= 10000
-    elif metric == "EuclLoc":
-        distances = pairwise_distances(frequencies, metric=Eucl, n_jobs=n_jobs)
-    elif metric == "JSD":
-        distances = pairwise_distances(frequencies, metric=JSD, n_jobs=n_jobs)
-    elif metric == "KL":        
-        distances = pairwise_distances(frequencies, metric=KL, n_jobs=n_jobs)
+    Bioseq_record = Seq(seq)
+    if (strand == "both"):
+        new_seq = str(str(seq)+str(Bioseq_record.reverse_complement()))
+    elif (strand == "minus"):
+        new_seq = str(Bioseq_record.reverse_complement())
+    elif (strand == "plus"):
+        new_seq = str(seq)
     else:
-        print("Error, unknown method {}".format(metric), file=sys.stderr)
+        print("Error, strand parameter of selectd_strand() should be choose from {'both', 'minus', 'plus'}", file=sys.stderr)
         sys.exit(1)
-    return distances
+    return new_seq
+
 
 def get_cmd():
     """ get command line argument
@@ -343,8 +335,8 @@ def get_cmd():
     #parser.add_argument("-t", "--windows_step", action="store", dest="windows_step", type=int, help="Sliding windows step size(bp)[default:%default]")
     parser.add_argument("-s", "--strand", action="store", dest="strand", default="both", choices=["both", "plus", "minus"],
                         help="strand used to compute microcomposition. [default:%(default)s]")
-    parser.add_argument("-d", "--distance", action="store", dest="dist", default="Eucl", choices=["KL", "Eucl", "JSD", "EuclLoc"], 
-                        help="how to compute distance between two signatures : KL: Kullback-Leibler, Eucl : Euclidean[default:%(default)s], JSD : Jensen-Shannon divergence")
+    parser.add_argument("-d", "--distance", action="store", dest="dist", default="Eucl", choices=["Eucl", "JSD", "EuclLoc"], 
+                        help="how to compute distance between two signatures : Eucl : Euclidean[default:%(default)s], JSD : Jensen-Shannon divergence")
     parser.add_argument("-u", "--cpu", action="store", dest="threads_max", type=int, default=4, 
                         help="how many threads to use for windows microcomposition computation[default:%(default)d]")
     #parser.add_argument("-g", "--granularity", action="store", dest="parallel_core_granularity_factor", type=float, default=1, 
@@ -366,15 +358,10 @@ def get_cmd():
 
 def main():
     params = get_cmd()
-    #### OLD 
-    #global parallel_core_granularity_factor
-    #parallel_core_granularity_factor=1
-    #res = parallel_distance_old(params.genome, params.threads_max, params.dist, params.k, params.strand)
-    ####
-    frequencies = compute_frequencies(params.genome, params.threads_max, params.k, params.strand)
+    frequencies = compute_frequencies(params.genome, params.threads_max, params.k, params.strand, 250)
     res = compute_distances(frequencies, metric=params.dist, n_jobs=params.threads_max)
     # save result in a numpy matrix
-    np.savez_compressed(params.out_file, res, delimiter="\t")
+    np.savetxt(params.out_file, res, delimiter="\t")
     
     return 0
        

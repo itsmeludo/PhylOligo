@@ -22,7 +22,18 @@ def get_cmd():
 def main():
     params = get_cmd()
 
-    
+    data = list(SeqIO.parse(genome, "fasta"))
+    labels = list()
+    with open(param.labels) as inf:
+        for line in inf:
+            labels.append(line.strip())
+            
+    idx = np.arange(len(labels))
+    size = int((len(labels) * params.sampling)/100.)
+    with open(params.outputfasta, "w") as outf:
+        selected = np.random.choices(idx, size, replace=False)
+        for i in selected:
+            outf.write(">{}\n{}\n".format(data[i].name, data[i].seq))
           
     return 0
 
