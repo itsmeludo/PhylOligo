@@ -30,6 +30,7 @@ from itertools import product
 ## clustering
 import numpy as np
 from sklearn.metrics.pairwise import pairwise_distances
+
 #import hdbscan
 #from scipy.stats import entropy
 #from numpy.linalg import norm
@@ -65,7 +66,6 @@ def JSD(a, b):
 def make_freqchunk(frequencies, chunksize):
     """ prepare frequencies to be parallelized
     """
-    
     chunk = list()
     for i in range(len(frequencies)):
         freqi = frequencies[i]
@@ -111,12 +111,6 @@ def compute_distances(frequencies, chunksize, metric="Eucl", localrun=False, n_j
         (n_samples, n_samples) distance matrix
     """
     scoop.logger.info("Starting distance computation")
-    #if metric == "Eucl":
-        ## use euclidean distance of sklearn
-        #distances = pairwise_distances(frequencies, metric="euclidean")
-        #distances[np.isnan(distances)]=0
-        #distances[np.isinf(distances)]=0
-        #distances *= 10000
     if metric == "Eucl":
         if localrun:
             distances = pairwise_distances(frequencies, metric=Eucl, n_jobs=n_jobs)
@@ -135,18 +129,7 @@ def compute_distances(frequencies, chunksize, metric="Eucl", localrun=False, n_j
                 res = futures.map(compute_JSD_unpack, freqchunk)
                 for i, j, d in res:
                     distances[i, j] = distances[j, i] = d
-                
-    #elif metric == "KL":        
-        #distances = pairwise_distances(frequencies, metric=KL, n_jobs=n_jobs)
-        #with open("dump.txt", "w") as outf:
-            #for i in range(len(frequencies)):
-                #for j in range(i+1, len(frequencies)):
-                    #d = KL(frequencies[i], frequencies[j])
-                    #if d < 0:
-                        #print(i, j, d)
-                        #outf.write("{}\n{}\n".format(" ".join([str(val) for val in frequencies[i]]), 
-                                                     #" ".join([str(val) for val in frequencies[j]])))
-                        #sys.exit(1)
+    
     else:
         print("Error, unknown method {}".format(metric), file=sys.stderr)
         sys.exit(1)
@@ -154,7 +137,7 @@ def compute_distances(frequencies, chunksize, metric="Eucl", localrun=False, n_j
 
 #### frequencies computation ####
 
-def cut_sequence(seq, ksize):
+def cut_sequence_and_count(seq, ksize):
     """ cut sequence in words of size k
     
     Parameters:
@@ -173,7 +156,7 @@ def cut_sequence(seq, ksize):
     """
     seq_words = list()
     # re.split: excludes what is not a known characterised nucleotide 
-    for subseq in re.split('[^ACGTacgt]+', seq): 
+    for subseq in re.split('[^ACGT]+', seq): 
         if (len(subseq) >= ksize):
             #get all kword in sub-sequence
             seq_words.extend(subseq[i: i+ksize] for i in range(len(subseq)-(ksize-1)))  
@@ -200,16 +183,15 @@ def count2freq(count_words, kword_count, ksize):
     """
     features = list()
     if kword_count > 0:
-        letter_list = list(product(("C","G","A","T"), repeat=ksize))
-        #word_universe = list(map("".join,letter_list))
-        for letter_word in letter_list:
+        # iterate over letter product
+        for letter_word in product(("C","G","A","T"), repeat=ksize):
             kword = "".join(letter_word)
             if kword in count_words:
                 features.append(count_words[kword]/kword_count)
             else:
                 features.append(0)
     else:
-        features = [np.inf for kword in letter_list]
+        features = [0 for kword in range(4**ksize)]
     return np.array(features)
 
 def compute_frequency(seq, ksize=4, strand="both"):
@@ -233,7 +215,7 @@ def compute_frequency(seq, ksize=4, strand="both"):
     # we work on upper case letters
     seq = seq.upper()
     # raw word count
-    count_words, kword_count = cut_sequence(seq, ksize)
+    count_words, kword_count = cut_sequence_and_count(seq, ksize)
     # create feature vector
     features = count2freq(count_words, kword_count, ksize)
     return features
@@ -276,15 +258,12 @@ def compute_frequencies(genome, ksize, strand, chunksize):
         the samples x features matrix storing NT composition of fasta sequences
     """
     scoop.logger.info("Starting frequencies computation")
-    # compute frequencies # TODO parallelization of frequencies computation
+    # compute frequencies
     frequencies = list()
     for seqchunk in read_seq_chunk(genome, chunksize, ksize, strand):
         chunkfreq = futures.map(frequency_pack, seqchunk)
         frequencies.extend(chunkfreq)
                            
-    #for record in  SeqIO.parse(genome, "fasta"):
-        #frequencies.append(frequency(str(record.seq), ksize, strand))
-    
     return np.array(frequencies)
 
 #### Sequences ####
@@ -344,32 +323,23 @@ def select_strand (seq, strand="both"):
 def get_cmd():
     """ get command line argument
     """
-    #Utilisation = "%prog [-i FILE] [options]"
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--assembly", action="store", required=True, dest="genome", 
                         help="multifasta of the genome assembly")
-    #parser.add_argument("-c", "--conta", action="store", dest="conta", help="multifasta of the contaminant species training set")
-    #parser.add_argument("-r", "--host", action="store", dest="host", help="optional multifasta of the host species training set")
-    #parser.add_argument("-n", "--n_max_freq_in_windows", action="store", type=float, dest="n_max_freq_in_windows", default=0.4, help="maximum proportion of N tolerated in a window to compute the microcomposition anyway [0~1]. Too much 'N's will reduce the number of kmer counts and will artificially coarse the resolution of the frequencies. If your assembly contains many stretches of 'N's, consider rising this parameter and shortening the windows step in order to allow computation and signal in the output, it might cost you computational time though. Windows which do not meet this criteria will be affected a distance of 'nan'")
     parser.add_argument("-k", "--lgMot", action="store", dest="k", type=int, default=4, 
                         help="word lenght / kmer length / k [default:%(default)d]")
-    #parser.add_argument("-w", "--windows_size", action="store", dest="windows_size", type=int, help="Sliding windows size (bp)[default:%default]")
-    #parser.add_argument("-t", "--windows_step", action="store", dest="windows_step", type=int, help="Sliding windows step size(bp)[default:%default]")
     parser.add_argument("-s", "--strand", action="store", dest="strand", default="both", choices=["both", "plus", "minus"],
                         help="strand used to compute microcomposition. [default:%(default)s]")
     parser.add_argument("-d", "--distance", action="store", dest="dist", default="Eucl", choices=["Eucl", "JSD"], 
                         help="how to compute distance between two signatures : Eucl : Euclidean[default:%(default)s], JSD : Jensen-Shannon divergence")
-    parser.add_argument("--freq-chunk-size", action="store", dest="freqchunksize", type=int, help="the size of the chunk to use in scoop to compute frequencies", default=250)
-    parser.add_argument("--dist-chunk-size", action="store", dest="distchunksize", type=int, help="the size of the chunk to use in scoop to compute distances", default=250)
+    parser.add_argument("--freq-chunk-size", action="store", dest="freqchunksize", type=int, default=250,
+                        help="the size of the chunk to use in scoop to compute frequencies")
+    parser.add_argument("--dist-chunk-size", action="store", dest="distchunksize", type=int, default=250,
+                        help="the size of the chunk to use in scoop to compute distances")
     parser.add_argument("--local", action="store_true", dest="localrun", help="don't use scoop to compute distances use joblib", default=False)
     
-    parser.add_argument("-u", "--cpu", action="store", dest="threads_max", type=int, default=4, 
+    parser.add_argument("-c", "--cpu", action="store", dest="threads_max", type=int, default=4, 
                         help="how many threads to use for windows microcomposition computation[default:%(default)d]")
-    #parser.add_argument("-g", "--granularity", action="store", dest="parallel_core_granularity_factor", type=float, default=1, 
-                        #help="Factor to refine the granularity of parallel threads. The higher the factor, the greater the number of smaller bins.[default:%(default)d]")
-    #parser.add_argument("-a", "--sampling", action="store", dest="sampling", type=float, default=0,
-                        #help="performs first a read sampling on the specified percentage of read, can be used for quick analyses, "
-                        #"tests, and large datasets [default:%(default)f, input value must be between 0 and 100]")
     parser.add_argument("-o", "--out", action="store", dest="out_file", default="phyloligo.out", 
                         help="output file[default:%(default)s]")
 
@@ -384,11 +354,13 @@ def get_cmd():
 
 def main():
     params = get_cmd()
+    
+    # compute word frequency of each sequence
     frequencies = compute_frequencies(params.genome, params.k, params.strand, params.distchunksize)
-    res = compute_distances(frequencies, params.freqchunksize, metric=params.dist, local=params.localrun, n_jobs=params.threads_max)
+    # compute pairwise distances
+    res = compute_distances(frequencies, params.freqchunksize, metric=params.dist, localrun=params.localrun, n_jobs=params.threads_max)
     # save result in a numpy matrix
     np.savetxt(params.out_file, res, delimiter="\t")
-    
     return 0
        
 if __name__ == "__main__":
