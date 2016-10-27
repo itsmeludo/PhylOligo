@@ -93,7 +93,7 @@ def compute_Eucl_unpack(params):
     d = Eucl(freqi, freqj)
     return i, j, d
     
-def compute_distances(frequencies, chunksize, metric="Eucl"):
+def compute_distances(frequencies, chunksize, metric="Eucl", localrun=False, n_jobs=1):
     """ compute pairwises distances
     
     Parameters
@@ -118,20 +118,23 @@ def compute_distances(frequencies, chunksize, metric="Eucl"):
         #distances[np.isinf(distances)]=0
         #distances *= 10000
     if metric == "Eucl":
-        #distances = pairwise_distances(frequencies, metric=Eucl, n_jobs=n_jobs)
-        distances = np.zeros((len(frequencies), len(frequencies)), dtype=float)
-        for freqchunk in make_freqchunk(frequencies, chunksize):
-            res = futures.map(compute_Eucl_unpack, freqchunk)
-            for i, j, d in res:
-                distances[i, j] = distances[j, i] = d
+        if localrun:
+            distances = pairwise_distances(frequencies, metric=Eucl, n_jobs=n_jobs)
+        else:
+            distances = np.zeros((len(frequencies), len(frequencies)), dtype=float)
+            for freqchunk in make_freqchunk(frequencies, chunksize):
+                res = futures.map(compute_Eucl_unpack, freqchunk)
+                for i, j, d in res:
+                    distances[i, j] = distances[j, i] = d
     elif metric == "JSD":
-        #distances = pairwise_distances(frequencies, metric=JSD, n_jobs=n_jobs)
-        print(len(frequencies))
-        distances = np.zeros((len(frequencies), len(frequencies)), dtype=float)
-        for freqchunk in make_freqchunk(frequencies, chunksize):
-            res = futures.map(compute_JSD_unpack, freqchunk)
-            for i, j, d in res:
-                distances[i, j] = distances[j, i] = d
+        if localrun:
+            distances = pairwise_distances(frequencies, metric=JSD, n_jobs=n_jobs)
+        else:
+            distances = np.zeros((len(frequencies), len(frequencies)), dtype=float)
+            for freqchunk in make_freqchunk(frequencies, chunksize):
+                res = futures.map(compute_JSD_unpack, freqchunk)
+                for i, j, d in res:
+                    distances[i, j] = distances[j, i] = d
                 
     #elif metric == "KL":        
         #distances = pairwise_distances(frequencies, metric=KL, n_jobs=n_jobs)
@@ -358,9 +361,11 @@ def get_cmd():
                         help="how to compute distance between two signatures : Eucl : Euclidean[default:%(default)s], JSD : Jensen-Shannon divergence")
     parser.add_argument("--freq-chunk-size", action="store", dest="freqchunksize", type=int, help="the size of the chunk to use in scoop to compute frequencies", default=250)
     parser.add_argument("--dist-chunk-size", action="store", dest="distchunksize", type=int, help="the size of the chunk to use in scoop to compute distances", default=250)
-    #parser.add_argument("-u", "--cpu", action="store", dest="threads_max", type=int, default=4, 
-                        #help="how many threads to use for windows microcomposition computation[default:%(default)d]")
-    ##parser.add_argument("-g", "--granularity", action="store", dest="parallel_core_granularity_factor", type=float, default=1, 
+    parser.add_argument("--local", action="store_true", dest="localrun", help="don't use scoop to compute distances use joblib", default=False)
+    
+    parser.add_argument("-u", "--cpu", action="store", dest="threads_max", type=int, default=4, 
+                        help="how many threads to use for windows microcomposition computation[default:%(default)d]")
+    #parser.add_argument("-g", "--granularity", action="store", dest="parallel_core_granularity_factor", type=float, default=1, 
                         #help="Factor to refine the granularity of parallel threads. The higher the factor, the greater the number of smaller bins.[default:%(default)d]")
     #parser.add_argument("-a", "--sampling", action="store", dest="sampling", type=float, default=0,
                         #help="performs first a read sampling on the specified percentage of read, can be used for quick analyses, "
@@ -380,7 +385,7 @@ def get_cmd():
 def main():
     params = get_cmd()
     frequencies = compute_frequencies(params.genome, params.k, params.strand, params.distchunksize)
-    res = compute_distances(frequencies, params.freqchunksize, metric=params.dist)
+    res = compute_distances(frequencies, params.freqchunksize, metric=params.dist, local=params.localrun, n_jobs=params.threads_max)
     # save result in a numpy matrix
     np.savetxt(params.out_file, res, delimiter="\t")
     
