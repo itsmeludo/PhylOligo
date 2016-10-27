@@ -3,12 +3,12 @@
 #$ -S /bin/bash
 #$ -q workq
 #$ -cwd
-#$ -pe parallel_smp 16
+#$ -pe parallel_smp 30
 #$ -l mem=5G
 #$ -l h_vmem=8G
 
 
-python333 -m scoop -n $NSLOTS phyloligo.py $@
+python3 -m scoop -n $NSLOTS phyloligo.py $@
 
 #-i ../PhylOligo_Mor/data/M.oryzae_TH12.fasta -k 5 -d JSD -o ../PhylOligo_Mor/results/M.oryzae_TH12_JSD_scoop2.mat
 
