@@ -29,7 +29,7 @@ from itertools import product
 
 ## clustering
 import numpy as np
-#from sklearn.metrics.pairwise import pairwise_distances
+from sklearn.metrics.pairwise import pairwise_distances
 #import hdbscan
 #from scipy.stats import entropy
 #from numpy.linalg import norm
