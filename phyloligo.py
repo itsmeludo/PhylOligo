@@ -93,7 +93,7 @@ def compute_Eucl_unpack(params):
     d = Eucl(freqi, freqj)
     return i, j, d
     
-def compute_distances(frequencies, metric="Eucl", n_jobs=1):
+def compute_distances(frequencies, metric="Eucl"):
     """ compute pairwises distances
     
     Parameters
@@ -111,13 +111,13 @@ def compute_distances(frequencies, metric="Eucl", n_jobs=1):
         (n_samples, n_samples) distance matrix
     """
     scoop.logger.info("Starting distance computation")
+    #if metric == "Eucl":
+        ## use euclidean distance of sklearn
+        #distances = pairwise_distances(frequencies, metric="euclidean")
+        #distances[np.isnan(distances)]=0
+        #distances[np.isinf(distances)]=0
+        #distances *= 10000
     if metric == "Eucl":
-        # use euclidean distance of sklearn
-        distances = pairwise_distances(frequencies, metric="euclidean", n_jobs=n_jobs)
-        distances[np.isnan(distances)]=0
-        distances[np.isinf(distances)]=0
-        distances *= 10000
-    elif metric == "EuclLoc":
         #distances = pairwise_distances(frequencies, metric=Eucl, n_jobs=n_jobs)
         distances = np.zeros((len(frequencies), len(frequencies)), dtype=float)
         for freqchunk in make_freqchunk(frequencies, 250):
@@ -255,15 +255,13 @@ def frequency_pack(params):
     features = compute_frequency(*params)
     return features
 
-def compute_frequencies(genome, nb_thread, ksize, strand, chunksize):
+def compute_frequencies(genome, ksize, strand, chunksize):
     """ compute frequencies
     
     Parameters:
     -----------
     genome: string
         path to the genome file
-    nb_thread: int
-        number of parallel instance
     ksize: int
         kmer size to use
     strand: string
@@ -356,11 +354,11 @@ def get_cmd():
     #parser.add_argument("-t", "--windows_step", action="store", dest="windows_step", type=int, help="Sliding windows step size(bp)[default:%default]")
     parser.add_argument("-s", "--strand", action="store", dest="strand", default="both", choices=["both", "plus", "minus"],
                         help="strand used to compute microcomposition. [default:%(default)s]")
-    parser.add_argument("-d", "--distance", action="store", dest="dist", default="Eucl", choices=["Eucl", "JSD", "EuclLoc"], 
+    parser.add_argument("-d", "--distance", action="store", dest="dist", default="Eucl", choices=["Eucl", "JSD"], 
                         help="how to compute distance between two signatures : Eucl : Euclidean[default:%(default)s], JSD : Jensen-Shannon divergence")
-    parser.add_argument("-u", "--cpu", action="store", dest="threads_max", type=int, default=4, 
-                        help="how many threads to use for windows microcomposition computation[default:%(default)d]")
-    #parser.add_argument("-g", "--granularity", action="store", dest="parallel_core_granularity_factor", type=float, default=1, 
+    #parser.add_argument("-u", "--cpu", action="store", dest="threads_max", type=int, default=4, 
+                        #help="how many threads to use for windows microcomposition computation[default:%(default)d]")
+    ##parser.add_argument("-g", "--granularity", action="store", dest="parallel_core_granularity_factor", type=float, default=1, 
                         #help="Factor to refine the granularity of parallel threads. The higher the factor, the greater the number of smaller bins.[default:%(default)d]")
     #parser.add_argument("-a", "--sampling", action="store", dest="sampling", type=float, default=0,
                         #help="performs first a read sampling on the specified percentage of read, can be used for quick analyses, "
@@ -379,8 +377,8 @@ def get_cmd():
 
 def main():
     params = get_cmd()
-    frequencies = compute_frequencies(params.genome, params.threads_max, params.k, params.strand, 250)
-    res = compute_distances(frequencies, metric=params.dist, n_jobs=params.threads_max)
+    frequencies = compute_frequencies(params.genome, params.k, params.strand, 250)
+    res = compute_distances(frequencies, metric=params.dist)
     # save result in a numpy matrix
     np.savetxt(params.out_file, res, delimiter="\t")
     
