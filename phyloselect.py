@@ -40,7 +40,7 @@ def get_cmd():
                         help="number of cluster")
     parser.add_argument("-f", action="store", dest="fastafile", 
                         help="path of the original fasta file used for the computation of the distance matrix")
-    parser.add_argument("--interative", action="store_true", dest="interactive", default=False
+    parser.add_argument("--interactive", action="store_true", dest="interactive", default=False,
                         help="allow the user to run the script in an interactive mode and change clustering parameter on the fly (require -t)")
     parser.add_argument("-o", action="store", dest="outputdir", required=True)
     params = parser.parse_args()
@@ -216,26 +216,22 @@ def write_fastafile(labels_pred, fastafile, outputdir):
             with open(pathout, "w") as outf:
                 SeqIO.write(records, outf, "fasta")
 
-def clusterize(data, method, performtsne, 
-               min_cluster_size=None, min_samples=None, metric=None,
-               nbk=None):
-    
+def clusterize(data, method, min_cluster_size=None, min_samples=None, nbk=None):
     # cluster points
     kwargs = dict()
+    
     if method == "hdbscan":
         if min_cluster_size != None:
             kwargs["min_cluster_size"] = min_cluster_size
         if min_samples != None:
             kwargs["min_samples"] = min_samples
-        if not performtsne:
-            kwargs["metric"] = "precomputed"
+        kwargs["metric"] = "precomputed"
             
-    if method == "kmedoids" and nbk != None:
-        kwargs["n_clusters"] = nbk
-        if not performtsne:
-            kwargs["distance_metric"] = "precomputed"
-            print(kwargs)
-            
+    if method == "kmedoids":
+        if nbk != None:
+            kwargs["n_clusters"] = nbk
+        kwargs["distance_metric"] = "precomputed"
+        
     labels_pred = find_clusters(data, method, kwargs)
     return labels_pred
 
@@ -259,11 +255,7 @@ def main():
         plt.show()
         plt.close()
     
-    
-    
-    labels_pred = clusterize(data, params.method, params.performtsne, 
-               min_cluster_size=params.min_cluster_size, min_samples=params.min_samples, 
-               metric=params.metric, nbk=params.nbk)
+    labels_pred = clusterize(matrix, params.method, min_cluster_size=params.min_cluster_size, min_samples=params.min_samples, nbk=params.nbk)
     
     # plot the different classes if reduction of dimentionality
     if params.performtsne and not params.interactive:
@@ -276,27 +268,74 @@ def main():
         min_cl_size = params.min_cluster_size
         min_samples = params.min_samples
         nbk = params.nbk
-        while msg not in ["y", "n"]:
-            labels_pred = clusterize(data, method, True, 
-               min_cluster_size=min_cl_size, min_samples=min_samples, 
-               metric="precomputed", nbk=nbk)
+        while msg != "n":
+            labels_pred = clusterize(matrix, method, min_cluster_size=min_cl_size, min_samples=min_samples, nbk=nbk)
             show_labels(data, labels_pred, method)
             print("perform an other run? [y/n]")
-            msg = input()
+            msg = input("--> ")
             if msg == "y":
                 new_method = ""
                 while new_method not in ["hdbscan", "kmedoids", "n"]:
                     print("change method? [hdbscan/kmedoids/n]")
-                    new_methpd = input()
+                    new_method = input("--> ")
                 if new_method != "n":
                     method = new_method
                 if method == "hdbscan":
                     new_min_cl_size = None
                     while new_min_cl_size == None:
-                        print("[hdbscan] change min_cluser_size, old value = {}?".format(min_cl_size))
-                        if min_cls_size < 1:
-                            min_cl_size = None
-                            
+                        print("[hdbscan] change min_cluster_size, old value = {}?".format(min_cl_size))
+                        new_min_cl_size = input("--> ")
+                        if new_min_cl_size == "" and min_cl_size != None :
+                            new_min_cl_size = min_cl_size
+                        else:
+                            try:
+                                new_min_cl_size = int(new_min_cl_size)
+                            except ValueError:
+                                print("Please provide an integer value")
+                                new_min_cl_size = -1
+                            if new_min_cl_size < 1:
+                                new_min_cl_size = None
+                            else:
+                                min_cl_size = new_min_cl_size
+                    new_min_samples = None
+                    while new_min_samples == None:
+                        print("[hdbscan] change min_samples, old value = {}?".format(min_samples))
+                        new_min_samples = input("--> ")
+                        if new_min_samples == "" and min_samples != None:
+                            new_min_samples = min_samples
+                        else:
+                            try:
+                                new_min_samples = int(new_min_samples)
+                            except ValueError:
+                                print("Please provide an integer value")
+                                new_min_samples = -1
+                            if new_min_samples < 1:
+                                new_min_samples = None
+                            else:
+                                min_samples = new_min_samples
+                    print("[hdbscan] running hdbscan with parameters min_cluster_size={} min_samples={}".format(min_cl_size, min_samples))
+                elif method == "kmedoids":
+                    new_nbk = None
+                    while new_nbk == None:
+                        print("[kmedoids] change nbk, old value = {}?".format(nbk))
+                        new_nbk = input("--> ")
+                        if new_nbk == "" and nbk != None:
+                            new_nbk = nbk
+                        else:
+                            try:
+                                new_nbk = int(new_nbk)
+                            except ValueError:
+                                print("Please provide an integer value")
+                                new_nbk = -1
+                            if new_nbk < 1:
+                                new_nbk = None
+                            else:
+                                nbk = new_nbk
+                    print("[kmedoids] running kmedoids with parameters nbk={}".format(nbk))
+                else:
+                    print("Unknown method name {}".format(method))
+                    sys.exit(1)
+                
             
         pathout = os.path.join(params.outputdir, "data_tsne_reduc.pdf")
           
