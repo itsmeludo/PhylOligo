@@ -45,8 +45,6 @@ def KL(a, b):
     d[np.isnan(d)]=0 
     d[np.isinf(d)]=0
     res = np.sum(d)
-    #if res < 0:
-        #print(a, b, res)
     return res
 
 def Eucl(a, b):
@@ -57,19 +55,44 @@ def Eucl(a, b):
     d[np.isinf(d)]=0
     return np.sqrt(np.sum(d))
 
-def JSD2(a, b):
+def JSD(a, b):
     """ Compute JSD distance
     """
     h = 0.5 * (a + b)
     d = 0.5 * (KL(a, h) + KL(b, h))
     return d
 
-def JSD(P, Q):
-    _P = P / norm(P, ord=1)
-    _Q = Q / norm(Q, ord=1)
-    _M = 0.5 * (_P + _Q)
-    return 0.5 * (entropy(_P, _M) + entropy(_Q, _M))
+def make_freqchunk(frequencies, chunksize):
+    """ prepare frequencies to be parallelized
+    """
+    
+    chunk = list()
+    for i in range(len(frequencies)):
+        freqi = frequencies[i]
+        for j in range(i, len(frequencies)):
+            freqj = frequencies[j]
+            chunk.append((i, j, freqi, freqj))
+            if len(chunk) == chunksize:
+                yield chunk
+                chunk = list()
+    # the last chunk 
+    if chunk != []:
+        yield chunk
 
+def compute_JSD_unpack(params):
+    """ unpack parameters to compute distances
+    """
+    i, j, freqi, freqj = params
+    d = JSD(freqi, freqj)
+    return i, j, d
+
+def compute_Eucl_unpack(params):
+    """ unpack parameters to compute distances
+    """
+    i, j, freqi, freqj = params
+    d = Eucl(freqi, freqj)
+    return i, j, d
+    
 def compute_distances(frequencies, metric="Eucl", n_jobs=1):
     """ compute pairwises distances
     
@@ -87,6 +110,7 @@ def compute_distances(frequencies, metric="Eucl", n_jobs=1):
     distances: np.array
         (n_samples, n_samples) distance matrix
     """
+    scoop.logger.info("Starting distance computation")
     if metric == "Eucl":
         # use euclidean distance of sklearn
         distances = pairwise_distances(frequencies, metric="euclidean", n_jobs=n_jobs)
@@ -94,9 +118,21 @@ def compute_distances(frequencies, metric="Eucl", n_jobs=1):
         distances[np.isinf(distances)]=0
         distances *= 10000
     elif metric == "EuclLoc":
-        distances = pairwise_distances(frequencies, metric=Eucl, n_jobs=n_jobs)
+        #distances = pairwise_distances(frequencies, metric=Eucl, n_jobs=n_jobs)
+        distances = np.zeros((len(frequencies), len(frequencies)), dtype=float)
+        for freqchunk in make_freqchunk(frequencies, 250):
+            res = futures.map(compute_Eucl_unpack, freqchunk)
+            for i, j, d in res:
+                distances[i, j] = distances[j, i] = d
     elif metric == "JSD":
-        distances = pairwise_distances(frequencies, metric=JSD, n_jobs=n_jobs)
+        #distances = pairwise_distances(frequencies, metric=JSD, n_jobs=n_jobs)
+        print(len(frequencies))
+        distances = np.zeros((len(frequencies), len(frequencies)), dtype=float)
+        for freqchunk in make_freqchunk(frequencies, 2500):
+            res = futures.map(compute_JSD_unpack, freqchunk)
+            for i, j, d in res:
+                distances[i, j] = distances[j, i] = d
+                
     #elif metric == "KL":        
         #distances = pairwise_distances(frequencies, metric=KL, n_jobs=n_jobs)
         #with open("dump.txt", "w") as outf:
@@ -238,6 +274,7 @@ def compute_frequencies(genome, nb_thread, ksize, strand, chunksize):
     frequencies: numpy.array
         the samples x features matrix storing NT composition of fasta sequences
     """
+    scoop.logger.info("Starting frequencies computation")
     # compute frequencies # TODO parallelization of frequencies computation
     frequencies = list()
     for seqchunk in read_seq_chunk(genome, chunksize, ksize, strand):
@@ -272,24 +309,9 @@ def read_seq_chunk(genome, chunksize, ksize, strand):
         if len(seqchunk) == chunksize:
             yield seqchunk
             seqchunk = list()
-
-def number_of_sequences(genome):
-    """ open the fasta file and count the number of sequences
-    
-    Parameters:
-    -----------
-    genome: string
-        path to the genome file
-        
-    Return:
-    -------
-    cnt: int
-        the number of sequences
-    """
-    cnt = 0
-    for record in SeqIO.parse(genome, "fasta"):
-        cnt += 1
-    return cnt
+    # the last chunk 
+    if seqchunk != []:
+        yield seqchunk
 
 def select_strand (seq, strand="both"):
     """ choose which strand to work on
@@ -317,7 +339,6 @@ def select_strand (seq, strand="both"):
         print("Error, strand parameter of selectd_strand() should be choose from {'both', 'minus', 'plus'}", file=sys.stderr)
         sys.exit(1)
     return new_seq
-
 
 def get_cmd():
     """ get command line argument
