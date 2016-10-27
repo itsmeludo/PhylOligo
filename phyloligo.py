@@ -356,8 +356,8 @@ def get_cmd():
                         help="strand used to compute microcomposition. [default:%(default)s]")
     parser.add_argument("-d", "--distance", action="store", dest="dist", default="Eucl", choices=["Eucl", "JSD"], 
                         help="how to compute distance between two signatures : Eucl : Euclidean[default:%(default)s], JSD : Jensen-Shannon divergence")
-    parser.add_argument("--freq-chunk-size", action="store", dest="freqchunksize", default=int, help="the size of the chunk to use in scoop to compute frequencies", default=250)
-    parser.add_argument("--dist-chunk-size", action="store", dest="distchunksize", default=int, help="the size of the chunk to use in scoop to compute distances", default=250)
+    parser.add_argument("--freq-chunk-size", action="store", dest="freqchunksize", type=int, help="the size of the chunk to use in scoop to compute frequencies", default=250)
+    parser.add_argument("--dist-chunk-size", action="store", dest="distchunksize", type=int, help="the size of the chunk to use in scoop to compute distances", default=250)
     #parser.add_argument("-u", "--cpu", action="store", dest="threads_max", type=int, default=4, 
                         #help="how many threads to use for windows microcomposition computation[default:%(default)d]")
     ##parser.add_argument("-g", "--granularity", action="store", dest="parallel_core_granularity_factor", type=float, default=1, 
