@@ -110,7 +110,7 @@ def compute_distances(frequencies, metric="Eucl"):
     distances: np.array
         (n_samples, n_samples) distance matrix
     """
-    scoop.logger.info("Starting distance computation")
+    #scoop.logger.info("Starting distance computation")
     #if metric == "Eucl":
         ## use euclidean distance of sklearn
         #distances = pairwise_distances(frequencies, metric="euclidean")
@@ -272,7 +272,7 @@ def compute_frequencies(genome, ksize, strand, chunksize):
     frequencies: numpy.array
         the samples x features matrix storing NT composition of fasta sequences
     """
-    scoop.logger.info("Starting frequencies computation")
+    #scoop.logger.info("Starting frequencies computation")
     # compute frequencies # TODO parallelization of frequencies computation
     frequencies = list()
     for seqchunk in read_seq_chunk(genome, chunksize, ksize, strand):
