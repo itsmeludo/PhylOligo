@@ -110,7 +110,7 @@ def compute_distances(frequencies, chunksize, metric="Eucl", localrun=False, n_j
     distances: np.array
         (n_samples, n_samples) distance matrix
     """
-    scoop.logger.info("Starting distance computation")
+    #scoop.logger.info("Starting distance computation")
     if metric == "Eucl":
         if localrun:
             distances = pairwise_distances(frequencies, metric=Eucl, n_jobs=n_jobs)
@@ -257,8 +257,8 @@ def compute_frequencies(genome, ksize, strand, chunksize):
     frequencies: numpy.array
         the samples x features matrix storing NT composition of fasta sequences
     """
-    scoop.logger.info("Starting frequencies computation")
-    # compute frequencies
+    #scoop.logger.info("Starting frequencies computation")
+    # compute frequencies # TODO parallelization of frequencies computation
     frequencies = list()
     for seqchunk in read_seq_chunk(genome, chunksize, ksize, strand):
         chunkfreq = futures.map(frequency_pack, seqchunk)
