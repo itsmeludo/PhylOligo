@@ -14,7 +14,7 @@ Garanteed with misatkes. <- Including this one.
   #numpy
   #cython
   
-#from scoop import futures
+from scoop import futures
   
 import os, sys, re, argparse, pickle, shlex
 import uuid
@@ -31,6 +31,8 @@ from itertools import product
 ## clustering
 import numpy as np
 from sklearn.metrics.pairwise import pairwise_distances
+from sklearn.externals.joblib import Parallel, delayed
+from sklearn.utils import gen_even_slices
 
 #import hdbscan
 #from scipy.stats import entropy
@@ -94,7 +96,7 @@ def compute_Eucl_unpack(params):
     d = Eucl(freqi, freqj)
     return i, j, d
     
-def compute_distances_pickle(frequencies, chunksize, metric="Eucl", localrun=False, n_jobs=1, workdir="/tmp/"):
+def compute_distances_pickle(frequencies, chunksize, metric="Eucl", n_jobs=1, workdir="/tmp/"):
     """ compute pairwises distances
     
     Parameters
@@ -113,55 +115,49 @@ def compute_distances_pickle(frequencies, chunksize, metric="Eucl", localrun=Fal
     """
     #scoop.logger.info("Starting distance computation")
     if metric == "Eucl":
-        if localrun:
-            distances = pairwise_distances(frequencies, metric=Eucl, n_jobs=n_jobs)
-        else:
-            pathin, pathout = os.path.join(workdir, str(uuid.uuid4())), os.path.join(workdir, str(uuid.uuid4()))
-            distances = np.zeros((len(frequencies), len(frequencies)), dtype=float)
-            for freqchunk in make_freqchunk(frequencies, chunksize):
-                with open(pathin, "wb") as outf:
-                    pickle.dump(freqchunk, outf)
-                # subprocess the computation
-                cmd = "python3 -m scoop -n {} phylo_batchdist.py {} {} {}".format(n_jobs, pathin, pathout, metric)
-                cmd = shlex.split(cmd)
-                try:
-                    res = subprocess.check_call(cmd)
-                except:
-                    print("Error running phylo_batchdist.py on {} {} /{}".format(pathin, pathout, metric), file=sys.stderr)
-                    sys.exit(1)
-                    
-                with open(pathout, "rb") as inf:
-                    res = pickle.load(inf)
-                #res = futures.map(compute_Eucl_unpack, freqchunk)
-                for i, j, d in res:
-                    distances[i, j] = distances[j, i] = d
-            os.remove(pathin)
-            os.remove(pathout)
+        pathin, pathout = os.path.join(workdir, str(uuid.uuid4())), os.path.join(workdir, str(uuid.uuid4()))
+        distances = np.zeros((len(frequencies), len(frequencies)), dtype=float)
+        for freqchunk in make_freqchunk(frequencies, chunksize):
+            with open(pathin, "wb") as outf:
+                pickle.dump(freqchunk, outf)
+            # subprocess the computation
+            cmd = "python3 -m scoop -n {} phylo_batchdist.py {} {} {}".format(n_jobs, pathin, pathout, metric)
+            cmd = shlex.split(cmd)
+            try:
+                res = subprocess.check_call(cmd)
+            except:
+                print("Error running phylo_batchdist.py on {} {} /{}".format(pathin, pathout, metric), file=sys.stderr)
+                sys.exit(1)
+                
+            with open(pathout, "rb") as inf:
+                res = pickle.load(inf)
+            #res = futures.map(compute_Eucl_unpack, freqchunk)
+            for i, j, d in res:
+                distances[i, j] = distances[j, i] = d
+        os.remove(pathin)
+        os.remove(pathout)
     elif metric == "JSD":
-        if localrun:
-            distances = pairwise_distances(frequencies, metric=JSD, n_jobs=n_jobs)
-        else:
-            pathin, pathout = os.path.join(workdir, str(uuid.uuid4())), os.path.join(workdir, str(uuid.uuid4()))
+        pathin, pathout = os.path.join(workdir, str(uuid.uuid4())), os.path.join(workdir, str(uuid.uuid4()))
 
-            distances = np.zeros((len(frequencies), len(frequencies)), dtype=float)
-            for freqchunk in make_freqchunk(frequencies, chunksize):
-                with open(pathin, "wb") as outf:
-                    pickle.dump(freqchunk, outf)
-                # subprocess the computation
-                cmd = "python3 -m scoop -n {} phylo_batchdist.py {} {} {}".format(n_jobs, pathin, pathout, metric)
-                cmd = shlex.split(cmd)
-                try:
-                    res = subprocess.check_call(cmd)
-                except:
-                    print("Error running phylo_batchdist.py on {} {} /{}".format(pathin, pathout, metric), file=sys.stderr)
-                    sys.exit(1)    
-                with open(pathout, "rb") as inf:
-                    res = pickle.load(inf)
-                #res = futures.map(compute_JSD_unpack, freqchunk)
-                for i, j, d in res:
-                    distances[i, j] = distances[j, i] = d
-            os.remove(pathin)
-            os.remove(pathout)
+        distances = np.zeros((len(frequencies), len(frequencies)), dtype=float)
+        for freqchunk in make_freqchunk(frequencies, chunksize):
+            with open(pathin, "wb") as outf:
+                pickle.dump(freqchunk, outf)
+            # subprocess the computation
+            cmd = "python3 -m scoop -n {} phylo_batchdist.py {} {} {}".format(n_jobs, pathin, pathout, metric)
+            cmd = shlex.split(cmd)
+            try:
+                res = subprocess.check_call(cmd)
+            except:
+                print("Error running phylo_batchdist.py on {} {} /{}".format(pathin, pathout, metric), file=sys.stderr)
+                sys.exit(1)    
+            with open(pathout, "rb") as inf:
+                res = pickle.load(inf)
+            #res = futures.map(compute_JSD_unpack, freqchunk)
+            for i, j, d in res:
+                distances[i, j] = distances[j, i] = d
+        os.remove(pathin)
+        os.remove(pathout)
     else:
         print("Error, unknown method {}".format(metric), file=sys.stderr)
         sys.exit(1)
@@ -382,6 +378,33 @@ def compute_frequencies_pickle(genome, ksize, strand, chunksize, nbthread, workd
     os.remove(pathout)
     return np.array(frequencies)
 
+def compute_frequencies_joblib(genome, ksize, strand, chunksize, nbthread):
+    """ compute frequencies
+    
+    Parameters:
+    -----------
+    genome: string
+        path to the genome file
+    ksize: int
+        kmer size to use
+    strand: string
+        select genome strand ('both', 'plus', 'minus')
+    workdir: strng
+        temporary working directory to store pickled chunk
+        
+    Return:
+    -------
+    frequencies: numpy.array
+        the samples x features matrix storing NT composition of fasta sequences
+    """
+    fd = delayed(compute_frequency)
+    frequencies = Parallel(n_jobs=nbthread, verbose=0)(
+        fd(str(record.seq), ksize, strand) for record in SeqIO.parse(genome, "fasta"))
+    
+    #for ar in frequencies:
+        #print(ar.shape)
+        
+    return np.vstack(frequencies)
 
 #### Sequences ####
 
@@ -453,7 +476,7 @@ def get_cmd():
                         help="the size of the chunk to use in scoop to compute frequencies")
     parser.add_argument("--dist-chunk-size", action="store", dest="distchunksize", type=int, default=250,
                         help="the size of the chunk to use in scoop to compute distances")
-    parser.add_argument("--local", action="store_true", dest="localrun", help="don't use scoop to compute distances use joblib", default=False)
+    parser.add_argument("--method", action="store", choices=["scoop1", "scoop2", "joblib"], dest="mthdrun", help="don't use scoop to compute distances use joblib", default=False)
     
     parser.add_argument("-c", "--cpu", action="store", dest="threads_max", type=int, default=4, 
                         help="how many threads to use for windows microcomposition computation[default:%(default)d]")
@@ -476,11 +499,20 @@ def main():
     params = get_cmd()
     
     # compute word frequency of each sequence
-    #frequencies = compute_frequencies(params.genome, params.k, params.strand, params.distchunksize)
-    frequencies = compute_frequencies_pickle(params.genome, params.k, params.strand, params.distchunksize, params.threads_max, params.workdir)
+    if params.mthdrun == "scoop1":
+        frequencies = compute_frequencies(params.genome, params.k, params.strand, params.distchunksize)
+    elif params.mthdrun == "scoop2":
+        frequencies = compute_frequencies_pickle(params.genome, params.k, params.strand, params.distchunksize, params.threads_max, params.workdir)
+    elif params.mthdrun == "joblib":
+        frequencies = compute_frequencies_joblib(params.genome, params.k, params.strand, params.distchunksize, params.threads_max)
+        
     # compute pairwise distances
-    #res = compute_distances(frequencies, params.freqchunksize, metric=params.dist, localrun=params.localrun, n_jobs=params.threads_max)
-    res = compute_distances_pickle(frequencies, params.freqchunksize, metric=params.dist, localrun=params.localrun, n_jobs=params.threads_max, workdir=params.workdir)
+    if params.mthdrun == "joblib":
+        res = compute_distances(frequencies, params.freqchunksize, metric=params.dist, localrun=True, n_jobs=params.threads_max)
+    elif params.mthdrun == "scoop1":
+        res = compute_distances(frequencies, params.freqchunksize, metric=params.dist, localrun=False, n_jobs=params.threads_max)
+    elif params.mthdrun == "scoop2":
+        res = compute_distances_pickle(frequencies, params.freqchunksize, metric=params.dist, n_jobs=params.threads_max, workdir=params.workdir)
     # save result in a numpy matrix
     np.savetxt(params.out_file, res, delimiter="\t")
     return 0
