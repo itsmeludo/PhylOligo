@@ -98,7 +98,7 @@ def JSD(a, b):
         posdef_check_value(d2)
         d2 = np.sum(d2, axis=2)
         d = 0.5 * (d1 + d2)
-        d = d.T
+        #d = d.T
     return d
 
 def JSD_loc(output, X, s):
