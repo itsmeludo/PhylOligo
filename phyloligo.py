@@ -284,7 +284,6 @@ def compute_distances_large(frequencies, freq_name, metric="Eucl", n_jobs=1):
     #scoop.logger.info("Starting distance computation")
     folder = tempfile.mkdtemp()
     dist_name = os.path.join(folder, 'distances.pkl')
-    print(freq_name)
 
     # Pre-allocate a writeable shared memory map as a container for the
     # results of the parallel computation
