@@ -16,10 +16,11 @@ Garanteed with misatkes. <- Including this one.
   
 from scoop import futures
   
-import os, sys, re, argparse, pickle, shlex
+import os, sys, re, argparse, pickle, shlex, shutil
 import uuid
 import time
 import logging
+import tempfile
 
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -30,9 +31,13 @@ from itertools import product
 
 ## clustering
 import numpy as np
+from sklearn.metrics.pairwise import euclidean_distances
 from sklearn.metrics.pairwise import pairwise_distances
-from sklearn.externals.joblib import Parallel, delayed
+from sklearn.metrics.pairwise import check_pairwise_arrays
+from sklearn.utils.extmath import row_norms, safe_sparse_dot
 from sklearn.utils import gen_even_slices
+from sklearn.externals.joblib import Parallel, delayed
+from sklearn.externals.joblib import dump, load
 
 #import hdbscan
 #from scipy.stats import entropy
@@ -40,31 +45,66 @@ from sklearn.utils import gen_even_slices
 
 np.seterr(divide='ignore', invalid='ignore')
 
+def remove_folder(folder):
+    try:
+        shutil.rmtree(folder)
+    except:
+        print("Failed to delete folder: {}".format(folder))
+
 #### DISTANCES ####
+
+def posdef_check_value(d):
+    d[np.isnan(d)]=0    
+    d[np.isinf(d)]=0
 
 def KL(a, b):
     """ compute the KL distance
     """
-    d = a * np.log(a/b)
-    d[np.isnan(d)]=0 
-    d[np.isinf(d)]=0
-    res = np.sum(d)
+    if a.ndim == 1 and b.ndim == 1:
+        d = a * np.log(a/b)
+        posdef_check_value(d)
+        res = np.sum(d)
+    elif a.ndim == 2 and b.ndim == 2:
+        X, Y = check_pairwise_arrays(a, b)
+        X = X[:,np.newaxis]
+        d = X * np.log(X/Y)
+        posdef_check_value(d)
+        res = np.sum(d, axis=2).T
+    else:
+        print("Dimension erro in KL, a={}, b={}".format(a.ndim, b.ndim), file=sys.stderr)
+        sys.exit(1)
     return res
+
 
 def Eucl(a, b):
     """ compute Euclidean distance
     """
     d = pow(a-b,2)
-    d[np.isnan(d)]=0
-    d[np.isinf(d)]=0
+    posdef_check_value(d)
     return np.sqrt(np.sum(d))
 
 def JSD(a, b):
     """ Compute JSD distance
     """
-    h = 0.5 * (a + b)
-    d = 0.5 * (KL(a, h) + KL(b, h))
+    if a.ndim == 1 and b.ndim == 1:
+        h = 0.5 * (a + b)
+        d = 0.5 * (KL(a, h) + KL(b, h))
+    else:
+        h = 0.5 * (a[np.newaxis,:] + b[:, np.newaxis])
+        d1 = a[np.newaxis,:] * np.log(a[np.newaxis,:]/h)
+        posdef_check_value(d1)
+        d1 = np.sum(d1, axis=2)
+        d2 = b[:, np.newaxis] * np.log(b[:, np.newaxis]/h)
+        posdef_check_value(d2)
+        d2 = np.sum(d2, axis=2)
+        d = 0.5 * (d1 + d2)
+        d = d.T
     return d
+
+def JSD_loc(output, X, s):
+    X, Y = check_pairwise_arrays(X, X[s])
+    d = JSD(X, Y)
+    output[s] = d
 
 def make_freqchunk(frequencies, chunksize):
     """ prepare frequencies to be parallelized
@@ -163,6 +203,24 @@ def compute_distances_pickle(frequencies, chunksize, metric="Eucl", n_jobs=1, wo
         sys.exit(1)
     return distances
 
+def euclidean_distances_loc(output, X, s):
+    distances = euclidean_distances(X, X[s])
+    output[s] = distances.T
+    
+    #Xc, Yc = check_pairwise_arrays(X, X[s])
+
+    #YY = row_norms(Yc, squared=True)[np.newaxis, :]
+    #XX = row_norms(Xc, squared=True)[:, np.newaxis]
+
+    #distances = safe_sparse_dot(X, Y.T, dense_output=True)
+    #distances *= -2
+    #distances += XX
+    #distances += YY
+    #np.maximum(distances, 0, out=distances)
+
+    #np.sqrt(distances, out=distances) # distances # if squared distances are enought
+    #output = np.hstack((output, distances))
+    
 def compute_distances(frequencies, chunksize, metric="Eucl", localrun=False, n_jobs=1):
     """ compute pairwises distances
     
@@ -205,6 +263,54 @@ def compute_distances(frequencies, chunksize, metric="Eucl", localrun=False, n_j
         sys.exit(1)
     return distances
 
+
+def compute_distances_large(frequencies, freq_name, metric="Eucl", n_jobs=1):
+    """ compute pairwises distances
+    
+    Parameters
+    ----------
+    freq_name: string
+        path of the local frequency array
+    metric: string
+        distance method to use ('JSD', 'Eucl', 'KL')
+    n_jobs: int
+        number of parallel job to execute
+    
+    Return:
+    -------
+    distances: np.array
+        (n_samples, n_samples) distance matrix
+    """
+    #scoop.logger.info("Starting distance computation")
+    folder = tempfile.mkdtemp()
+    dist_name = os.path.join(folder, 'distances.pkl')
+    print(freq_name)
+
+    # Pre-allocate a writeable shared memory map as a container for the
+    # results of the parallel computation
+    distances = np.memmap(dist_name, dtype=frequencies.dtype, shape=(frequencies.shape[0], frequencies.shape[0]), mode='w+')
+
+    if metric == "Eucl":
+        # execute parallel computation of euclidean distance
+        fd = delayed(euclidean_distances_loc)
+        Parallel(n_jobs=n_jobs, verbose=0)(fd(distances, frequencies, s) for s in gen_even_slices(frequencies.shape[0], n_jobs))
+            
+        remove_folder(folder)
+        folder = os.path.dirname(freq_name)
+        remove_folder
+        
+    elif metric == "JSD":
+        fd = delayed(JSD_loc)
+        Parallel(n_jobs=n_jobs, verbose=0)(fd(distances, frequencies, s) for s in gen_even_slices(frequencies.shape[0], n_jobs))
+        
+        remove_folder(folder)
+        folder = os.path.dirname(freq_name)
+        remove_folder
+            
+    else:
+        print("Error, unknown method {}".format(metric), file=sys.stderr)
+        sys.exit(1)
+    return distances
 #### frequencies computation ####
 
 def cut_sequence_and_count(seq, ksize):
@@ -290,6 +396,16 @@ def compute_frequency(seq, ksize=4, strand="both"):
     features = count2freq(count_words, kword_count, ksize)
     return features
 
+def compute_frequency_memmap(frequency, i, seq, ksize=4, strand="both"):
+    seq = select_strand(seq, strand)
+    # we work on upper case letters
+    seq = seq.upper()
+    # raw word count
+    count_words, kword_count = cut_sequence_and_count(seq, ksize)
+    # create feature vector
+    frequency[i] = count2freq(count_words, kword_count, ksize)
+    
+
 def frequency_pack(params):
     """ compute kmer frequency, ie feature vector of each read
     
@@ -334,7 +450,9 @@ def compute_frequencies(genome, ksize, strand, chunksize):
         chunkfreq = futures.map(frequency_pack, seqchunk)
         frequencies.extend(chunkfreq)
                            
-    return np.array(frequencies)
+    frequencies = np.array(frequencies)
+    #print("Frequency shape: {}".format(frequencies.shape))
+    return frequencies
 
 def compute_frequencies_pickle(genome, ksize, strand, chunksize, nbthread, workdir):
     """ compute frequencies
@@ -376,7 +494,9 @@ def compute_frequencies_pickle(genome, ksize, strand, chunksize, nbthread, workd
         frequencies.extend(chunkfreq)
     os.remove(pathin)
     os.remove(pathout)
-    return np.array(frequencies)
+    frequencies = np.array(frequencies)
+    #print("Frequency shape: {}".format(frequencies.shape))
+    return frequencies
 
 def compute_frequencies_joblib(genome, ksize, strand, chunksize, nbthread):
     """ compute frequencies
@@ -403,8 +523,43 @@ def compute_frequencies_joblib(genome, ksize, strand, chunksize, nbthread):
     
     #for ar in frequencies:
         #print(ar.shape)
+    frequencies = np.vstack(frequencies)
+    #print("Frequency shape: {}".format(frequencies.shape))
+    if len(frequencies.shape) < 2:
+        frequencies.reshape(-1, 1)
+    return frequencies
+
+def compute_frequencies_joblib_large(genome, ksize, strand, chunksize, nbthread):
+    """ compute frequencies
+    
+    Parameters:
+    -----------
+    genome: string
+        path to the genome file
+    ksize: int
+        kmer size to use
+    strand: string
+        select genome strand ('both', 'plus', 'minus')
+    workdir: strng
+        temporary working directory to store pickled chunk
         
-    return np.vstack(frequencies)
+    Return:
+    -------
+    frequencies: numpy.array
+        the samples x features matrix storing NT composition of fasta sequences
+    """
+    folder = tempfile.mkdtemp()
+    freq_name = os.path.join(folder, 'frequencies.pkl')
+    
+    
+    # Pre-allocate a writeable shared memory map as a container for the frequencies
+    nb_record = sum(1 for record in SeqIO.parse(genome, "fasta"))
+    frequencies = np.memmap(freq_name, dtype=np.float, shape=(nb_record, 4**ksize), mode='w+')
+    
+    fd = delayed(compute_frequency_memmap)
+    Parallel(n_jobs=nbthread, verbose=0)(fd(frequencies, i, str(record.seq), ksize, strand) for i, record in enumerate(SeqIO.parse(genome, "fasta")))
+    
+    return frequencies, freq_name
 
 #### Sequences ####
 
@@ -476,13 +631,14 @@ def get_cmd():
                         help="the size of the chunk to use in scoop to compute frequencies")
     parser.add_argument("--dist-chunk-size", action="store", dest="distchunksize", type=int, default=250,
                         help="the size of the chunk to use in scoop to compute distances")
-    parser.add_argument("--method", action="store", choices=["scoop1", "scoop2", "joblib"], dest="mthdrun", help="don't use scoop to compute distances use joblib", default=False)
-    
+    parser.add_argument("--method", action="store", choices=["scoop1", "scoop2", "joblib"], dest="mthdrun", help="don't use scoop to compute distances use joblib")
+    parser.add_argument("--large", action="store_true", dest="large", help="used in combination with joblib for large dataset", default=False)
     parser.add_argument("-c", "--cpu", action="store", dest="threads_max", type=int, default=4, 
                         help="how many threads to use for windows microcomposition computation[default:%(default)d]")
     parser.add_argument("-o", "--out", action="store", dest="out_file", default="phyloligo.out", 
                         help="output file[default:%(default)s]")
     parser.add_argument("-w", "--workdir", action="store", dest="workdir", help="working directory", required=True)
+    
 
     params = parser.parse_args()
 
@@ -504,11 +660,17 @@ def main():
     elif params.mthdrun == "scoop2":
         frequencies = compute_frequencies_pickle(params.genome, params.k, params.strand, params.distchunksize, params.threads_max, params.workdir)
     elif params.mthdrun == "joblib":
-        frequencies = compute_frequencies_joblib(params.genome, params.k, params.strand, params.distchunksize, params.threads_max)
+        if params.large:
+            frequencies, freq_name = compute_frequencies_joblib_large(params.genome, params.k, params.strand, params.distchunksize, params.threads_max)
+        else:
+            frequencies = compute_frequencies_joblib(params.genome, params.k, params.strand, params.distchunksize, params.threads_max)
         
     # compute pairwise distances
     if params.mthdrun == "joblib":
-        res = compute_distances(frequencies, params.freqchunksize, metric=params.dist, localrun=True, n_jobs=params.threads_max)
+        if params.large:
+            res = compute_distances_large(frequencies, freq_name, metric=params.dist, n_jobs=params.threads_max)
+        else:
+            res = compute_distances(frequencies, params.freqchunksize, metric=params.dist, localrun=True, n_jobs=params.threads_max)
     elif params.mthdrun == "scoop1":
         res = compute_distances(frequencies, params.freqchunksize, metric=params.dist, localrun=False, n_jobs=params.threads_max)
     elif params.mthdrun == "scoop2":
