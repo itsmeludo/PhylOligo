@@ -47,7 +47,8 @@ def get_cmd():
     params = parser.parse_args()
     
     if params.interactive and not params.performtsne:
-        print("Error, interactive mode (--interactive) requires tsne (-t)", file=sys.stderr)
+        #print("Error, interactive mode (--interactive) requires tsne (-t)", file=sys.stderr)
+        sys.stderr.write("Error, interactive mode (--interactive) requires tsne (-t)")
         sys.exit(1)
     return params
 
@@ -112,7 +113,8 @@ def find_clusters(data, method, kwargs):
         clusterer.fit(data)
         labels = clusterer.labels_
     else:
-        print("Error, unknown method {}".format(method), file=sys.stderr)
+        #print("Error, unknown method {}".format(method), file=sys.stderr)
+        sys.stderr.write("Error, unknown method {}".format(method))
     return labels
     
 def plot_labels(data, labels, algorithm, output):
@@ -250,7 +252,8 @@ def main():
         s = matrix.shape[0]
         n = np.sqrt(s)
         if str(n).split(".")[1] != "0":
-            print("Error, weird shape for matrix {}".format(params.distmat), file=sys.stderr)
+            #print("Error, weird shape for matrix {}".format(params.distmat), file=sys.stderr)
+            sys.stderr.write("Error, weird shape for matrix {}".format(params.distmat))
             sys.exit(1)
         matrix = matrix.reshape((int(n), int(n)))
     else:
