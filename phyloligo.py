@@ -207,19 +207,6 @@ def euclidean_distances_loc(output, X, s):
     distances = euclidean_distances(X, X[s])
     output[s] = distances.T
     
-    #Xc, Yc = check_pairwise_arrays(X, X[s])
-
-    #YY = row_norms(Yc, squared=True)[np.newaxis, :]
-    #XX = row_norms(Xc, squared=True)[:, np.newaxis]
-
-    #distances = safe_sparse_dot(X, Y.T, dense_output=True)
-    #distances *= -2
-    #distances += XX
-    #distances += YY
-    #np.maximum(distances, 0, out=distances)
-
-    #np.sqrt(distances, out=distances) # distances # if squared distances are enought
-    #output = np.hstack((output, distances))
     
 def compute_distances(frequencies, chunksize, metric="Eucl", localrun=False, n_jobs=1):
     """ compute pairwises distances

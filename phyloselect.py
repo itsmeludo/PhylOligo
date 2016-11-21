@@ -105,7 +105,7 @@ def find_clusters(data, method, kwargs):
     """
     if method == "hdbscan":
         clusterer = hdbscan.HDBSCAN(**kwargs)
-        clusterer.fit(data)
+        clusterer.fit(data.astype(np.float))
         labels = clusterer.labels_
     elif method == "kmedoids":
         clusterer = KMedoids(**kwargs)
@@ -243,6 +243,7 @@ def main():
         os.makedirs(params.outputdir)
     
     # get matrix and transform the data to a bidimensional set of point with tsne
+    print("Read matrix")
     if params.large:
         # if matrix was created using --large option read it as a memmap matrix
         matrix = np.memmap(params.distmat, dtype=np.float32, mode="r")
@@ -256,6 +257,7 @@ def main():
         matrix = read_distmat(params.distmat)
         
     if params.performtsne:
+        print("Transform matrix")
         data = transform_matrix_tsne(matrix, params.perplexity)
     else:
         data = matrix
@@ -267,6 +269,7 @@ def main():
         plt.show()
         plt.close()
     
+    print("Clusterize")
     labels_pred = clusterize(matrix, params.method, min_cluster_size=params.min_cluster_size, min_samples=params.min_samples, nbk=params.nbk)
     
     # plot the different classes if reduction of dimentionality
@@ -352,6 +355,7 @@ def main():
         pathout = os.path.join(params.outputdir, "data_tsne_reduc.pdf")
           
     # write cluster indexes
+    print("Store cluster indexes")
     pathout = os.path.join(params.outputdir, "data_cluster_indexes.dat")
     all_classes = np.unique(labels_pred)
     with open(pathout, "w") as outf:
