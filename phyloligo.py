@@ -264,7 +264,7 @@ def compute_distances(frequencies, chunksize, metric="Eucl", localrun=False, n_j
     return distances
 
 
-def compute_distances_large(frequencies, freq_name, metric="Eucl", n_jobs=1):
+def compute_distances_large(frequencies, freq_name, output, metric="Eucl", n_jobs=1):
     """ compute pairwises distances
     
     Parameters
@@ -282,19 +282,25 @@ def compute_distances_large(frequencies, freq_name, metric="Eucl", n_jobs=1):
         (n_samples, n_samples) distance matrix
     """
     #scoop.logger.info("Starting distance computation")
-    folder = tempfile.mkdtemp()
-    dist_name = os.path.join(folder, 'distances.pkl')
+    #folder = tempfile.mkdtemp()
+    #dist_name = os.path.join(folder, output)
 
     # Pre-allocate a writeable shared memory map as a container for the
     # results of the parallel computation
-    distances = np.memmap(dist_name, dtype=frequencies.dtype, shape=(frequencies.shape[0], frequencies.shape[0]), mode='w+')
+    distances = np.memmap(output, dtype=frequencies.dtype, shape=(frequencies.shape[0], frequencies.shape[0]), mode='w+')
+    
+    # close and reopen it for reference
+    #dump(distances, distname)
+    #distances = load(dist_name, mmap_mode = "r+")
+    del distances
+    distances = np.memmap(output, dtype=frequencies.dtype, shape=(frequencies.shape[0], frequencies.shape[0]), mode='r+')
 
     if metric == "Eucl":
         # execute parallel computation of euclidean distance
         fd = delayed(euclidean_distances_loc)
         Parallel(n_jobs=n_jobs, verbose=0)(fd(distances, frequencies, s) for s in gen_even_slices(frequencies.shape[0], n_jobs))
             
-        remove_folder(folder)
+        #remove_folder(folder)
         folder = os.path.dirname(freq_name)
         remove_folder
         
@@ -302,14 +308,15 @@ def compute_distances_large(frequencies, freq_name, metric="Eucl", n_jobs=1):
         fd = delayed(JSD_loc)
         Parallel(n_jobs=n_jobs, verbose=0)(fd(distances, frequencies, s) for s in gen_even_slices(frequencies.shape[0], n_jobs))
         
-        remove_folder(folder)
+        #remove_folder(folder)
         folder = os.path.dirname(freq_name)
         remove_folder
             
     else:
         print("Error, unknown method {}".format(metric), file=sys.stderr)
         sys.exit(1)
-    return distances
+    #return distances
+    
 #### frequencies computation ####
 
 def cut_sequence_and_count(seq, ksize):
@@ -548,12 +555,17 @@ def compute_frequencies_joblib_large(genome, ksize, strand, chunksize, nbthread)
         the samples x features matrix storing NT composition of fasta sequences
     """
     folder = tempfile.mkdtemp()
-    freq_name = os.path.join(folder, 'frequencies.pkl')
+    freq_name = os.path.join(folder, 'frequencies')
     
     
     # Pre-allocate a writeable shared memory map as a container for the frequencies
     nb_record = sum(1 for record in SeqIO.parse(genome, "fasta"))
-    frequencies = np.memmap(freq_name, dtype=np.float, shape=(nb_record, 4**ksize), mode='w+')
+    frequencies = np.memmap(freq_name, dtype=np.float32, shape=(nb_record, 4**ksize), mode='w+')
+    #print(freq_name)
+    del frequencies
+    frequencies = np.memmap(freq_name, dtype=np.float32, shape=(nb_record, 4**ksize), mode='r+')
+    #dump(frequencies, freq_name)
+    #frequencies = load(freq_name, mmap_mode = "r+") 
     
     fd = delayed(compute_frequency_memmap)
     Parallel(n_jobs=nbthread, verbose=0)(fd(frequencies, i, str(record.seq), ksize, strand) for i, record in enumerate(SeqIO.parse(genome, "fasta")))
@@ -654,6 +666,7 @@ def main():
     params = get_cmd()
     
     # compute word frequency of each sequence
+    print("Computing frequencies")
     if params.mthdrun == "scoop1":
         frequencies = compute_frequencies(params.genome, params.k, params.strand, params.distchunksize)
     elif params.mthdrun == "scoop2":
@@ -665,17 +678,22 @@ def main():
             frequencies = compute_frequencies_joblib(params.genome, params.k, params.strand, params.distchunksize, params.threads_max)
         
     # compute pairwise distances
+    print("Computing Pairwise distances")
     if params.mthdrun == "joblib":
         if params.large:
-            res = compute_distances_large(frequencies, freq_name, metric=params.dist, n_jobs=params.threads_max)
+            res = compute_distances_large(frequencies, freq_name, params.out_file, metric=params.dist, n_jobs=params.threads_max)
         else:
             res = compute_distances(frequencies, params.freqchunksize, metric=params.dist, localrun=True, n_jobs=params.threads_max)
     elif params.mthdrun == "scoop1":
         res = compute_distances(frequencies, params.freqchunksize, metric=params.dist, localrun=False, n_jobs=params.threads_max)
     elif params.mthdrun == "scoop2":
         res = compute_distances_pickle(frequencies, params.freqchunksize, metric=params.dist, n_jobs=params.threads_max, workdir=params.workdir)
+    
     # save result in a numpy matrix
-    np.savetxt(params.out_file, res, delimiter="\t")
+    if not (params.mthdrun == "joblib" and params.large):
+        print("Writing")
+        np.savetxt(params.out_file, res, delimiter="\t")
+        
     return 0
        
 if __name__ == "__main__":

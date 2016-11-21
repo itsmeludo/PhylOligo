@@ -42,6 +42,7 @@ def get_cmd():
                         help="path of the original fasta file used for the computation of the distance matrix")
     parser.add_argument("--interactive", action="store_true", dest="interactive", default=False,
                         help="allow the user to run the script in an interactive mode and change clustering parameter on the fly (require -t)")
+    parser.add_argument("--large", action="store_true", dest="large", help="used in combination with joblib for large dataset", default=False)
     parser.add_argument("-o", action="store", dest="outputdir", required=True)
     params = parser.parse_args()
     
@@ -242,7 +243,18 @@ def main():
         os.makedirs(params.outputdir)
     
     # get matrix and transform the data to a bidimensional set of point with tsne
-    matrix = read_distmat(params.distmat)
+    if params.large:
+        # if matrix was created using --large option read it as a memmap matrix
+        matrix = np.memmap(params.distmat, dtype=np.float32, mode="r")
+        s = matrix.shape[0]
+        n = np.sqrt(s)
+        if str(n).split(".")[1] != "0":
+            print("Error, weird shape for matrix {}".format(params.distmat), file=sys.stderr)
+            sys.exit(1)
+        matrix = matrix.reshape((int(n), int(n)))
+    else:
+        matrix = read_distmat(params.distmat)
+        
     if params.performtsne:
         data = transform_matrix_tsne(matrix, params.perplexity)
     else:
