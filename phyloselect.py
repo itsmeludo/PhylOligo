@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 """ evaluate Phyloligo results
 """
+import matplotlib
+matplotlib.use("Agg")
 
 import os, sys, argparse
-
-from kmedoids import KMedoids
+import tempfile
 
 from Bio import SeqIO
 
+from kmedoids import KMedoids
 import hdbscan
 import numpy as np
 import sklearn.cluster as cluster
@@ -41,8 +43,12 @@ def get_cmd():
     parser.add_argument("-f", action="store", dest="fastafile", 
                         help="path of the original fasta file used for the computation of the distance matrix")
     parser.add_argument("--interactive", action="store_true", dest="interactive", default=False,
-                        help="allow the user to run the script in an interactive mode and change clustering parameter on the fly (require -t)")
-    parser.add_argument("--large", action="store_true", dest="large", help="used in combination with joblib for large dataset", default=False)
+                        help="allow the user to run the script in an interactive mode and change "
+                        "clustering parameter on the fly (require -t)")
+    parser.add_argument("--large", action="store_true", dest="large", help="used in combination with "
+                        "joblib for large dataset", default=False)
+    parser.add_argument("--noX", action="store_true", dest="noX", help="instead of showing pictures, "
+                        "store them in pdf")
     parser.add_argument("-o", action="store", dest="outputdir", required=True)
     params = parser.parse_args()
     
@@ -137,11 +143,10 @@ def plot_labels(data, labels, algorithm, output):
     frame.axes.get_xaxis().set_visible(False)
     frame.axes.get_yaxis().set_visible(False)
     ax.set_title('Clusters found by {}'.format(str(algorithm)), fontsize=24)
-    #plt.show()
     plt.savefig(output, dpi=300)
     plt.close()
 
-def show_labels(data, labels, algorithm):
+def show_labels(data, labels, algorithm, noX, prefix="", dirout="/tmp/", verbose=0):
     """ display resulting labels
     
     Parameters:
@@ -163,7 +168,15 @@ def show_labels(data, labels, algorithm):
     frame.axes.get_xaxis().set_visible(False)
     frame.axes.get_yaxis().set_visible(False)
     ax.set_title('Clusters found by {}'.format(str(algorithm)), fontsize=24)
-    plt.show()
+    if noX:
+        pathout = tempfile.mktemp(prefix="tempfile_{}_".format(prefix), suffix=".pdf", dir=dirout)
+        if verbose :
+            print("saving file at {}".format(pathout))
+        plt.savefig(pathout)
+    else:
+        if verbose:
+            print("Displaing current clustering with algorithm {}".format(algorithm))
+        plt.show()
     plt.close()
 
     
@@ -266,7 +279,12 @@ def main():
     if params.interactive:
         fig, ax = plt.subplots()
         ax.scatter(data[:,0], data[:,1], **plot_kwds)
-        plt.show()
+        if params.noX:
+            pathout = tempfile.mktemp(suffix=".pdf", prefix="initial_clustering_", dir="/tmp/")
+            print("Saving dimensionallity reduction to {}".format(pathout))
+            plt.savefig(pathout)
+        else:
+            plt.show()
         plt.close()
     
     print("Clusterize")
@@ -283,9 +301,13 @@ def main():
         min_cl_size = params.min_cluster_size
         min_samples = params.min_samples
         nbk = params.nbk
+        cnt = 0
         while msg != "n":
-            labels_pred = clusterize(matrix, method, min_cluster_size=min_cl_size, min_samples=min_samples, nbk=nbk)
-            show_labels(data, labels_pred, method)
+            labels_pred = clusterize(matrix, method, 
+                                     min_cluster_size=min_cl_size, min_samples=min_samples, nbk=nbk)
+            show_labels(data, labels_pred, method, params.noX, prefix="clustering_{}".format(cnt), 
+                        dirout="/tmp/", verbose=1)
+            cnt += 1
             print("perform an other run? [y/n]")
             msg = input("--> ")
             if msg == "y":
