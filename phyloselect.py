@@ -5,7 +5,7 @@ import matplotlib
 matplotlib.use("Agg")
 
 import os, sys, argparse
-import tempfile
+import tempfile, time
 
 from Bio import SeqIO
 
@@ -21,7 +21,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 sns.set_context('poster')
 sns.set_color_codes()
-plot_kwds = {'alpha' : 0.25, 's' : 20, 'linewidths':0}
+plot_kwds = {'alpha' : 0.3, 's' : 30, 'linewidths':0}
 
 
 def get_cmd():
@@ -169,7 +169,11 @@ def show_labels(data, labels, algorithm, noX, prefix="", dirout="/tmp/", verbose
     frame.axes.get_yaxis().set_visible(False)
     ax.set_title('Clusters found by {}'.format(str(algorithm)), fontsize=24)
     if noX:
-        pathout = tempfile.mktemp(prefix="tempfile_{}_".format(prefix), suffix=".pdf", dir=dirout)
+        date = time.strftime("%Y%m%d")
+        curtime = time.strftime("%H%M%S")
+        pathout = tempfile.mktemp(
+            prefix="phyloselect_{}_{}_{}_".format(date, curtime, prefix), 
+            suffix=".pdf", dir=dirout)
         if verbose :
             print("saving file at {}".format(pathout))
         plt.savefig(pathout)
@@ -280,7 +284,12 @@ def main():
         fig, ax = plt.subplots()
         ax.scatter(data[:,0], data[:,1], **plot_kwds)
         if params.noX:
-            pathout = tempfile.mktemp(suffix=".pdf", prefix="initial_clustering_", dir="/tmp/")
+            date = time.strftime("%Y%m%d")
+            curtime = time.strftime("%H%M%S")
+            pathout = tempfile.mktemp(
+                prefix="phyloselect_init_{}_{}".format(date, curtime), 
+                suffix=".pdf", dir="/tmp/")
+            #pathout = tempfile.mktemp(suffix=".pdf", prefix="initial_clustering_", dir="/tmp/")
             print("Saving dimensionallity reduction to {}".format(pathout))
             plt.savefig(pathout)
         else:
