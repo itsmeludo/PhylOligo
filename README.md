@@ -9,6 +9,7 @@ Generate the all-by-all contig distance matrix
 phyloligo.py -d Eucl -i genome.fasta -o genome.Eucl.mat -u 64
 ```
 Parameters:
+```
 *    -h      --help              Show this help message and exit
 *    -i      --assembly          Multifasta of the genome assembly
 *    -k      --lgMot             word lenght / kmer length / k [default:4]
@@ -21,7 +22,7 @@ Parameters:
 *    -c      --cpu               How many threads to use for contigs microcomposition computation[default:4]                
 *    -o      --out               Output file[default:phyloligo.out]
 *   -w      --workdir           Working directory
-
+```
 
 
 
@@ -36,6 +37,7 @@ phyloselect.R -d -m -c 0.95 -s 4000 -t BIONJ -f c -w 20  -i genome.JSD.mat -a ge
 ```
 
 Parameters:
+```
 *    -i     --matrix                      all-by-all contig distance matrix, tab separated (required)
 *    -a     --assembly                    multifasta file of the contigs (required)
 *    -f     --tree_draw_method            tree building type. [phylogram, cladogram, fan, unrooted, radial] by default cladogram.
@@ -52,7 +54,7 @@ Parameters:
 *    -w     --branchwidth                 Branch width factor [40]
 *    -v     --verbose                     say what the program do. Not implemented yet.
 *    -h     --help                        Yep, does that.
-
+```
 
 note: PhyloSelect uses the library Ape and its interactive clade selection function on a tree plot with the mouse. X11 is therefore required. If the program has to run on a server -typically for memory reasons- please use the -X option of ssh to allow X11 forwarding.
 
@@ -68,6 +70,7 @@ phyloselect.py -i Mgenome.JSD.mat -t -m hdbscan --noX -o genome_conta
 
 ```
 Parameters:
+```
 *    -h      --help          Show this help message and exit
 *    -i                      The input matrix file
 *    -t                      Perform t-SNE for visualization and pre-clustering
@@ -81,7 +84,7 @@ Parameters:
 *           --large          Used in combination with joblib for large dataset
 *           --noX            Instead of showing pictures, store them in pdf
 *    -o                      OUTPUTDIR
-
+```
 
 
 
