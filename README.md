@@ -112,7 +112,6 @@ Install
         * [ape](http://ape-package.ird.fr)
         * [gplots](https://cran.r-project.org/web/packages/gplots/index.html)
         * [getopt](https://cran.r-project.org/web/packages/getopt/getopt.pdf)
-        * [gtools](https://cran.r-project.org/web/packages/gtools/index.html)
     * [EMBOSS](http://emboss.sourceforge.net/download)
     * [Samtools](http://www.htslib.org/)
     * X11 (only required to run phyloselect.R)
