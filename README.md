@@ -3,6 +3,32 @@ Bioinformatics / Genomics
 Explore oligonucleotide composition similarity between assembly contigs or scaffolds to detect contaminant DNA.
 
 
+Install
+-------
+
+sudo pip install phyloligo
+
+or 
+
+pip install phyloligo --user
+
+Requirements
+------------
+
+'biopython>=1.68', 
+'hdbscan',
+'scikit-learn>=0.18.1',
+'numpy>=1.11.2'n
+'cython>=0.25.1',
+
+if installed with pip the requirements will be automatically installed
+
+you can also install them manually
+
+pip install -r requirements.txt
+
+
+
 Generate the all-by-all contig distance matrix
 ----------------------------------------------
 ```bash
