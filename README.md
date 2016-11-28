@@ -23,22 +23,28 @@ Regroup contigs by compositional similarity on a tree and explore branching
 ---------------------------------------------------------------------------
 
 ```bash
-phyloselect.R -d -v  -i genome.Eucl.mat -a genome.fasta -o genome_conta
+phyloselect.R -d -m -c 0.95 -s 4000 -t BIONJ -f c -w 20  -i genome.JSD.mat -a genome.fasta -o genome_conta 
+
 ```
 
 Parameters:
-* -i    --matrix            All-by-all contig distance matrix, tab separated (required)
-* -a    --assembly          Multifasta file of the contigs (required)
-* -t    --tree_method       Tree building method (optional), by default NJ. No other option implemented ATM
-* -d    --dump_R_session    Should the R environment saved for later exploration? the filename will be generated from the outfile parameter or its default value
-* -g    --max_per           Max edge assembly length percentage displayed (%)
-* -l    --min_perc          Min edge assembly length percentage displayed (%)
-* -k    --keep_perc         Ratio of out-of-range percentages to display (%)
-* -o    --outfile           Outfile name, default:phyloligo.out
-* -b    --branchlength      Use the branch length information  for tree display if invoked
-* -w    --branchwidth       Branch width factor [40]",
-* -v    --verbos            Say what the program do.
-* -h    --help              Yep, does that.
+*    -i     --matrix                      all-by-all contig distance matrix, tab separated (required)
+*    -a     --assembly                    multifasta file of the contigs (required)
+*    -f     --tree_draw_method            tree building type. [phylogram, cladogram, fan, unrooted, radial] by default cladogram.
+*    -t     --tree_building_method        tree drawing type [NJ, UPGMA, BIONJ, wardD, wardD2, Hsingle, Hcomplete, WPGMA, WPGMC, UPGMC] by default NJ.
+*    -m     --matrix_heatmap              Should a matrix heatmap should be produced
+*    -c     --distance_clip_percentile    Threshold to exclude very distant contigs based on the distance distribution. Use if the tree is squashed by repeats or degenerated/uninformative contigs [0.97]
+*    -s     --contig_min_size             Min length in bp of contigs to use in the matrix and tree. Use if the tree is squashed by repeats or degenerated/uninformative contigs [4000]
+*    -d     --dump_R_session              Should the R environment be saved for later exploration? the filename will be generated from the outfile parameter or its default value
+*    -g     --max_perc                    max edge assembly length percentage displayed (%)
+*    -l     --min_perc                    min edge assembly length percentage displayed (%)
+*    -k     --keep_perc                   ratio of out-of-range percentages to display (%)
+*    -o     --outfile                     outfile name, default:phyloligo.out
+*    -b     --branchlength                display branch length
+*    -w     --branchwidth                 Branch width factor [40]
+*    -v     --verbose                     say what the program do. Not implemented yet.
+*    -h     --help                        Yep, does that.
+
 
 note: PhyloSelect uses the library Ape and its interactive clade selection function on a tree plot with the mouse. X11 is therefore required. If the program has to run on a server -typically for memory reasons- please use the -X option of ssh to allow X11 forwarding.
 
@@ -50,12 +56,17 @@ Install
     * Python 3.x
         * [BioPython](biopython.org)
         * [Numpy](numpy.org)
-        * [Cython](http://cython.org/)
+        * [Hdbscan](https://pypi.python.org/pypi/hdbscan)
+	* [Seaborn] (http://seaborn.pydata.org)
+        * [Matplotlib](http://matplotlib.org)
+        * [Cython](http://cython.org)
+        * [H5py](http://www.h5py.org)
     * R 3.x
-        * [ape](http://ape-package.ird.fr/)
+        * [ape](http://ape-package.ird.fr)
+	* [gplots](https://cran.r-project.org/web/packages/gplots/index.html)
         * [getopt](https://cran.r-project.org/web/packages/getopt/getopt.pdf)
         * [gtools](https://cran.r-project.org/web/packages/gtools/index.html)
-    * [EMBOSS](http://emboss.sourceforge.net/download/)
+    * [EMBOSS](http://emboss.sourceforge.net/download)
     * [Samtools](http://www.htslib.org/)
     * X11 (only required to run phyloselect)
 
@@ -69,11 +80,15 @@ easy_install3 -U setuptools
 pip3 install biopython 
 pip3 install cython
 pip3 install numpy
+pip3 install matplotlib
+pip3 install seaborn
+pip3 install h5py 
+pip3 install hdbscan 
 ```
 
 in R, as root or user
 ```R
-install.packages(c("ape","getopt","gtools"))
+install.packages(c("ape","getopt","gplots"))
 ```
 
 * clone the repo
@@ -87,5 +102,6 @@ or download it from https://github.com/itsmeludo/PhylOligo
 
 ```Bash
 cd PhylOligo
+export PATH="$PATH:`pwd`"
 sudo ln -s `pwd`/{phyloligo.py,phyloselect.R} /usr/local/bin/
 ```

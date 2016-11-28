@@ -9,6 +9,7 @@
 
 ### dependencies:
 # library(gtools)
+library(gplots)
 library(ape)
 library(getopt) #install.packages("getopt")   #maybe launch it as admin or root if you want it for other users too.
 # ### phyloligo.py in the exec PATH 
@@ -17,6 +18,21 @@ library(getopt) #install.packages("getopt")   #maybe launch it as admin or root 
 
 # Functions :
 
+
+tree_build= function(dist_matrix,method){
+    switch(method,
+              NJ = nj(dist_matrix),
+              BIONJ = bionj(dist_matrix),
+              UPGMA = hclust(d = as.dist(dist_matrix), method = "average"),
+              wardD = hclust(d = as.dist(dist_matrix), method = "ward.D"),
+              wardD2 = hclust(d = as.dist(dist_matrix), method = "ward.D2"),
+              Hsingle = hclust(d = as.dist(dist_matrix), method = "single"),
+              Hcomplete = hclust(d = as.dist(dist_matrix), method = "complete"),
+              WPGMA = hclust(d = as.dist(dist_matrix), method = "mcquitty"),
+              WPGMC = hclust(d = as.dist(dist_matrix), method = "median"),
+              UPGMC = hclust(d = as.dist(dist_matrix), method = "centroid")
+             )
+}
 
 dev.new <- function(width = 7, height = 10) {
   platform <- sessionInfo()$platform
@@ -178,7 +194,7 @@ clade_select<-function(phy, title = TRUE, subbg = "white", return.tree = FALSE,e
             print(cmd)
             system(cmd)
 #             plots à join colored mapping  to each selected clade:
-            pdf(file=paste(outfile,"_",subset,".pdf",sep=""),width=16,height=9)
+            pdf(file=paste(outfile,"_",subset,".pdf",sep=""),width=36,height=24)
                 plot(phy,use.edge.length=lastPP$use.edge.length,type=lastPP$type,show.tip.label=lastPP$show.tip.label,edge.width=edge_size_tree,edge.color=edge_selected_color)
                 edgelabels(text=edge_label,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5,col = edge_selected_color)
             dev.off()
@@ -224,9 +240,9 @@ interactive_mode=function(){
     library(ape)
     X11(width=12,height=10)
     edge_size=edge_size/sum(edge_size)*100*branchwidth
-    plot.phylo(tree,use.edge.length=branchlength,type="c",show.tip.label=FALSE,edge.width=edge_size)
+    plot.phylo(tree,use.edge.length=branchlength,type=opt[["tree_draw_method"]],show.tip.label=FALSE,edge.width=edge_size)
     edgelabels(text=edge_lab,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5)
-    clade_select(tree,return.tree=TRUE,type='c',use.edge.length=branchlength,font=2,edge_size=edge_size,edge_label=edge_lab)
+    clade_select(tree,return.tree=TRUE,type=opt[["tree_draw_method"]],use.edge.length=branchlength,font=2,edge_size=edge_size,edge_label=edge_lab)
 }
 
 # branchlength=FALSE
@@ -234,8 +250,12 @@ interactive_mode=function(){
 spec <- matrix(c(
   'matrix'         , 'i', 1, "character", "all-by-all contig distance matrix, tab separated (required)",
   'assembly'         , 'a', 1, "character", "multifasta file of the contigs (required)",
-  'tree_method'     , 't', 2, "character", "tree building method (optional), by default NJ. No other option implemented ATM",
-  'dump_R_session'     , 'd', 0, "logical", "Should the R environment saved for later exploration? the filename will be generated from the outfile parameter or its default value",
+  'tree_draw_method'     , 'f', 2, "character", "tree building type. [phylogram, cladogram, fan, unrooted, radial] by default cladogram.",
+  'tree_building_method'     , 't', 2, "character", "tree drawing type [NJ, UPGMA, BIONJ, wardD, wardD2, Hsingle, Hcomplete, WPGMA, WPGMC, UPGMC] by default NJ.",
+  'matrix_heatmap'     , 'm', 0, "logical", "Should a matrix heatmap should be produced",
+  'distance_clip_percentile'     , 'c', 2, "double", "Threshold to exclude very distant contigs based on the distance distribution. Use if the tree is squashed by repeats or degenerated/uninformative contigs [0.97]",
+  'contig_min_size'     , 's', 2, "double", "Min length in bp of contigs to use in the matrix and tree. Use if the tree is squashed by repeats or degenerated/uninformative contigs [4000]",
+  'dump_R_session'     , 'd', 0, "logical", "Should the R environment be saved for later exploration? the filename will be generated from the outfile parameter or its default value",
   'max_perc'     , 'g', 2, "double", "max edge assembly length percentage displayed (%)",
   'min_perc'     , 'l', 2, "double", "min edge assembly length percentage displayed (%)",
   'keep_perc'           , 'k', 2, "double",   "ratio of out-of-range percentages to display (%)",
@@ -245,6 +265,7 @@ spec <- matrix(c(
   'verbose'           , 'v', 0, "logical",   "say what the program do. Not implemented yet.",
   'help'           , 'h', 0, "logical",   "this help"
 ),ncol=5,byrow=T)
+
 
 
 opt = getopt(spec);
@@ -260,6 +281,8 @@ if (is.null(opt[["verbose"]])) {
 outfile = ifelse(is.null(opt[["outfile"]]), outfile <- "phyloligo.out" , outfile <-opt[["outfile"]])
 branchlength = ifelse(is.null(opt[["branchlength"]]), branchlength <- FALSE , branchlength <-TRUE)
 keep_perc = ifelse(is.null(opt[["keep_perc"]]), keep_perc <- 5 , keep_perc <-opt[["keep_perc"]])
+tree_draw_method = ifelse(is.null(opt[["tree_draw_method"]]), tree_draw_method <- "c" , tree_draw_method <-opt[["tree_draw_method"]])
+tree_building_method = ifelse(is.null(opt[["tree_building_method"]]), tree_building_method <- "NJ" , tree_building_method <-opt[["tree_building_method"]])
 min_perc = ifelse(is.null(opt[["min_perc"]]), min_perc <- 0.5 , min_perc <-opt[["min_perc"]])
 max_perc = ifelse(is.null(opt[["max_perc"]]), max_perc <- 30 , max_perc <-opt[["max_perc"]])
 branchwidth = ifelse(is.null(opt[["branchwidth"]]), branchwidth <- 40 , branchwidth <-opt[["branchwidth"]])
@@ -279,12 +302,9 @@ stopifnot(system("which infoseq",intern=TRUE,ignore.stdout = TRUE, ignore.stderr
 # assembly="~/Documents/Ludovic/data/TH12-rn_prefix.fna"
 
 dist_matrix_file = opt[["matrix"]]
-tree_method = opt[["tree_method"]]
+# tree_building_method = opt[["tree_building_method"]]
 assembly = opt[["assembly"]]
 # branchlength = opt[["branchlength"]]
-
-
-
 
 
 
@@ -300,27 +320,62 @@ if (opt[["verbose"]]) print(paste(date(), "Format data"))
 labels = system(paste("grep -Po \">[^ ]+\" ",assembly,"|sed 's/>//' "),intern=TRUE)
 lengths = as.numeric(system(paste("infoseq -auto -nocolumns -only -noheading -length ",assembly),intern=TRUE))
 colnames(dist_matrix) = labels
-
-
-if (opt[["verbose"]]) print(paste(date(), "Building NJ tree"))
-tree = nj(dist_matrix)
-
 # Vector containing contigs size with corresponding name
+names(lengths)<-labels
 
-vlen=lengths
-names(vlen)<-labels
+
+
+if (opt[["distance_clip_percentile"]]){
+    if (opt[["verbose"]]) print(paste(date(), "Clipping matrix outlyers"))
+    medians=apply(dist_matrix,1,mean)
+    indexes=which(medians<=quantile(medians,probs=opt[["distance_clip_percentile"]]))
+    dist_matrix = dist_matrix[indexes,indexes]
+    labels = labels[indexes]
+    lengths = lengths[indexes]
+}
+
+
+if (opt[["contig_min_size"]]){
+    if (opt[["verbose"]]) print(paste(date(), "Clipping matrix from contigs shorter than ",opt[["contig_min_size"]]," bp"))
+#     medians=apply(dist_matrix,1,mean)
+#     lengths = lengths[indexes]
+    indexes=which(lengths>=opt[["contig_min_size"]])
+    dist_matrix = dist_matrix[indexes,indexes]
+    labels = labels[indexes]
+    lengths = lengths[indexes]
+}
+
+
+
+
+if (opt[["matrix_heatmap"]]){
+    if (opt[["verbose"]]) print(paste(date(), "write matrix heatmap"))
+    pdf(file=paste(outfile,"_distance_matrix_heatmap.pdf",sep=""),width=24, height=24)
+#     layout(matrix(c(1,2),1,2), widths=c(4,1), heights=c(1,1))
+    heatmap.2(dist_matrix,key=T, trace='none')
+    
+    dev.off()
+}
+
+
+if (opt[["verbose"]]){
+    print(paste(date(), "Building ",tree_building_method," tree"))
+}
+tree = tree_build(dist_matrix,tree_building_method)
+
+
 
 # Cumative size for tree edges
 
 edge_size<-unlist(apply(as.matrix(tree$edge),1,function(x){
-  sum(vlen[get_all_leaves(tree,x[2])])
+  sum(lengths[get_all_leaves(tree,x[2])])
 }))
 
 # Percentage of cumulative contigs length for tree edges
 
 edge_perc<-unlist(apply(as.matrix(tree$edge),1,function(x){
-  #res=round(sum(vlen[get_all_leaves(tree,x[2])])/sum(vlen)*100,digits = 0)
-  res=sum(vlen[get_all_leaves(tree,x[2])])/sum(vlen)*100
+  #res=round(sum(lengths[get_all_leaves(tree,x[2])])/sum(lengths)*100,digits = 0)
+  res=sum(lengths[get_all_leaves(tree,x[2])])/sum(lengths)*100
 }))
 
 # Edge labels (filtering percentages to display)
@@ -365,13 +420,16 @@ edge_lab[avoidable_edge_perc]<-""
 # Remove label for terminal edges
 
 
+
+
+
 if (opt[["verbose"]]) print(paste(date(), "Computing Tree plot"))
 X11(width=12,height=10) # external display when script is launched with Rscript command
 # par(ljoin = 1, lend = 1)
 
 edge_size=edge_size/sum(edge_size)*100*branchwidth
 
-plot(tree,use.edge.length=branchlength,type="c",show.tip.label=FALSE,edge.width=edge_size)
+plot(tree,use.edge.length=branchlength,type=opt[["tree_draw_method"]],show.tip.label=FALSE,edge.width=edge_size)
 #plot(tree,use.edge.length=FALSE,type="c",show.tip.label=FALSE,edge.width=edge_size/sum(edge_size)*100*15,edge.color = colfunc(100)[round(edge_perc)])
 edgelabels(text=edge_lab,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5)
 
@@ -387,7 +445,7 @@ if (!is.null(opt[["dump_R_session"]])) {
 }
 
 if (opt[["verbose"]]) print(paste(date(), "Entering interactive mode of clade selection to constitute learning sets for contalocate"))
-clade_select(tree,return.tree=TRUE,type='c',use.edge.length=branchlength,font=2,edge_size=edge_size,edge_label=edge_lab)
+clade_select(tree,return.tree=TRUE,type=opt[["tree_draw_method"]],use.edge.length=branchlength,font=2,edge_size=edge_size,edge_label=edge_lab)
 
 # Export clade-corresponding contig in fasta format
 
