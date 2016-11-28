@@ -143,13 +143,13 @@ def compute_frequency_memmap(frequency, i, seq, ksize=4, strand="both"):
     # create feature vector
     frequency[i] = count2freq(count_words, kword_count, ksize)
     
-def compute_frequency_h5py(freq_name, i, seq, ksize=4, strand="both"):
+def compute_frequency_h5py(freq_name_folder, i, seq, ksize=4, strand="both"):
     """ function used in joblib to write in the h5py array frequency
     
     Parameters:
     -----------
     freq_name: string
-        path to the h5py file holding frequencies
+        path to the folder file holding h5py frequencies
     i: int 
         index of the sequence
     seq: string
@@ -166,10 +166,11 @@ def compute_frequency_h5py(freq_name, i, seq, ksize=4, strand="both"):
     # raw word count
     count_words, kword_count = cut_sequence_and_count(seq, ksize)
     # create feature vector
-    hf = h5py.File(freq_name, "r+")
-    frequency = hf.get("frequencies")
-    frequency[i] = count2freq(count_words, kword_count, ksize)
-    hf.close()
+    freq_name = os.path.join(freq_name_folder, "frequencies_{}".format(i))
+    with h5py.File(freq_name, "w") as hf:
+        frequency = hf.create_dataset("frequencies", (4**ksize,), dtype="float32")
+        frequency[...] = count2freq(count_words, kword_count, ksize)[:]
+        #print(frequency)
     
     
 def frequency_pack(params):
@@ -337,6 +338,21 @@ def compute_frequencies_joblib_memmap(genome, ksize, strand, nbthread):
     
     return frequencies, freq_name
 
+def join_freq_results(folder, nb_record, ksize):
+    """ join results of frequency computations
+    """
+    freq_name = os.path.join(folder, "frequencies_results")
+    freq_folder = os.path.join(folder, "frequencies")
+    with h5py.File(freq_name, "w") as outhf:
+        frequencies = outhf.create_dataset("frequencies", (nb_record, 4**ksize), dtype="float32")
+        for res in os.listdir(freq_folder):
+            idx = int(res.split("_")[1])
+            with h5py.File(os.path.join(freq_folder, res), "r") as inhf:
+                freq = inhf.get("frequencies")
+                frequencies[idx] = freq.value[:]
+    return freq_name
+    
+
 
 def compute_frequencies_joblib_h5py(genome, ksize, strand, nbthread):
     """ compute frequencies
@@ -358,18 +374,25 @@ def compute_frequencies_joblib_h5py(genome, ksize, strand, nbthread):
         the samples x features matrix storing NT composition of fasta sequences
     """
     folder = tempfile.mkdtemp()
-    freq_name = os.path.join(folder, 'frequencies')
+    freq_name_folder = os.path.join(folder, 'frequencies')
+    if not os.path.isdir(freq_name_folder):
+        os.makedirs(freq_name_folder)
     
     # Pre-allocate a writeable shared memory map as a container for the frequencies
     nb_record = sum(1 for record in SeqIO.parse(genome, "fasta"))
     
-    with h5py.File(freq_name, "w") as hf:
-        frequencies = hf.create_dataset("frequencies", (nb_record, 4**ksize), dtype="float32")
+    #with h5py.File(freq_name, "w") as hf:
+        #frequencies = hf.create_dataset("frequencies", (nb_record, 4**ksize), dtype="float32")
     
     fd = delayed(compute_frequency_h5py)
-    Parallel(n_jobs=nbthread, verbose=0)(fd(freq_name, i, str(record.seq), ksize, strand) 
+    Parallel(n_jobs=nbthread, verbose=0)(fd(freq_name_folder, i, str(record.seq), ksize, strand) 
                                          for i, record in enumerate(SeqIO.parse(genome, "fasta")))
+    #for i, record in enumerate(SeqIO.parse(genome, "fasta")):
+        #compute_frequency_h5py(freq_name_folder, i, str(record.seq), ksize, strand)
     
+    # now join the results
+    freq_name = join_freq_results(folder, nb_record, ksize)
+    print(folder)
     return None, freq_name
 
 

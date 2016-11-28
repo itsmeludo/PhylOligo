@@ -90,26 +90,31 @@ def compute_Eucl_unpack(params):
     d = Eucl(freqi, freqj)
     return i, j, d
 
-def euclidean_distances_h5py(output, input, s):
-    hf = h5py.File(input, "r")
-    X = hf.get("frequencies")
-    dist = euclidean_distances(X, X[s])
-    hf.close()
-    hf = h5py.File(output, "r+")
-    distances = hf.get("distances")
-    distances[s] = dist.T
-    hf.close()
+def euclidean_distances_h5py(output_dir, input, s):
+    with h5py.File(input, "r") as hf:
+        X = hf.get("frequencies")
+        dist = euclidean_distances(X, X[s]).T
+    
+    output = os.path.join(output_dir, "distance_{}_{}".format(s.start, s.stop))
+    with h5py.File(output, "w") as hf:
+        distances = hf.create_dataset("distances", dist.shape, dtype="float32")
+        distances[...] = dist[:]
+    
 
-def JSD_h5py(output, input, s):
-    hf = h5py.File(input, "r")
-    X = hf.get("frequencies")
-    X, Y = check_pairwise_arrays(X, X[s])
-    d = JSD(X, Y)
-    hf.close()
-    hf = h5py.File(output, "r+")
-    distances = hf.get("distances")
-    distances[s] = d
-    hf.close()
+def JSD_h5py(output_dir, input, s):
+    with h5py.File(input, "r") as hf:
+        X = hf.get("frequencies")
+        X, Y = check_pairwise_arrays(X, X[s])
+        d = JSD(X, Y)
+    
+    output = os.path.join(output_dir, "distance_{}_{}".format(s.start, s.stop))
+    with h5py.File(output, "w") as hf:
+        distances = hf.create_dataset("distances", dist.shape, dtype="float32")
+        distances[...] = d[:]
+    #hf = h5py.File(output, "r+")
+    #distances = hf.get("distances")
+    #distances[s] = d
+    #hf.close()
     
 
 #### different flavor of parallelisms for distance computation
@@ -282,6 +287,15 @@ def compute_distances_memmap(frequencies, freq_name, output, metric="Eucl", n_jo
     #return distances
 
 
+def join_distance_results(dist_folder, dist_name, size, n_jobs):
+    with h5py.File(dist_name, "w") as hf:
+        distances = hf.create_dataset("distances", (size, size), dtype="float32")
+        for s in gen_even_slices(size, n_jobs):
+            pathin = os.path.join(dist_folder, "distance_{}_{}".format(s.start, s.stop))
+            with h5py.File(pathin, "r") as inf:
+                distances[s] = inf.get("distances").value[:]
+
+
 def compute_distances_h5py(freq_name, dist_name, metric="Eucl", n_jobs=1):
     """ compute pairwises distances
     
@@ -302,32 +316,39 @@ def compute_distances_h5py(freq_name, dist_name, metric="Eucl", n_jobs=1):
     #scoop.logger.info("Starting distance computation")
     #folder = tempfile.mkdtemp()
     #dist_name = os.path.join(folder, output)
+    
     folder = os.path.dirname(freq_name)
     
     with h5py.File(freq_name, "r") as hf:
         frequencies = hf.get("frequencies")
         size = frequencies.shape[0]
     
-    with h5py.File(dist_name, "w") as hf:
-        distances = hf.create_dataset("distances", (size, size), dtype="float32")
+    dist_folder = os.path.join(folder, "distances")
+    if not os.path.isdir(dist_folder):
+        os.makedirs(dist_folder)
     
     if metric == "Eucl":
         # execute parallel computation of euclidean distance
         fd = delayed(euclidean_distances_h5py)
-        Parallel(n_jobs=n_jobs, verbose=0)(fd(dist_name, freq_name, s) for s in gen_even_slices(size, n_jobs))
+        Parallel(n_jobs=n_jobs, verbose=0)(fd(dist_folder, freq_name, s) for s in gen_even_slices(size, n_jobs))
+        #for s in gen_even_slices(size, n_jobs):
+            #euclidean_distances_h5py(dist_folder, freq_name, s)
             
         print(freq_name)
         #remove_folder(folder)
         
     elif metric == "JSD":
         fd = delayed(JSD_h5py)
-        Parallel(n_jobs=n_jobs, verbose=0)(fd(dist_name, freq_name, s) for s in gen_even_slices(size, n_jobs))
+        Parallel(n_jobs=n_jobs, verbose=0)(fd(dist_folder, freq_name, s) for s in gen_even_slices(size, n_jobs))
         
         remove_folder(folder)
             
     else:
         print("Error, unknown method {}".format(metric), file=sys.stderr)
         sys.exit(1)
+        
+    # join distance results
+    join_distance_results(dist_folder, dist_name, size, n_jobs)
     #return distances
 
 
