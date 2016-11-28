@@ -5,6 +5,7 @@ from scoop import futures
 import os, sys, re
 import tempfile
 import shlex, subprocess, pickle
+import h5py
 from .phyloutils import select_strand
 
 from Bio import SeqIO
@@ -142,6 +143,35 @@ def compute_frequency_memmap(frequency, i, seq, ksize=4, strand="both"):
     # create feature vector
     frequency[i] = count2freq(count_words, kword_count, ksize)
     
+def compute_frequency_h5py(freq_name, i, seq, ksize=4, strand="both"):
+    """ function used in joblib to write in the h5py array frequency
+    
+    Parameters:
+    -----------
+    freq_name: string
+        path to the h5py file holding frequencies
+    i: int 
+        index of the sequence
+    seq: string
+        The nucleotide sequence
+    ksize: int
+        The size of the kmer
+    strand: string
+        which strand to used
+        
+    """
+    seq = select_strand(seq, strand)
+    # we work on upper case letters
+    seq = seq.upper()
+    # raw word count
+    count_words, kword_count = cut_sequence_and_count(seq, ksize)
+    # create feature vector
+    hf = h5py.File(freq_name, "r+")
+    frequency = hf.get("frequencies")
+    frequency[i] = count2freq(count_words, kword_count, ksize)
+    hf.close()
+    
+    
 def frequency_pack(params):
     """ compute kmer frequency, ie feature vector of each read
     
@@ -269,7 +299,7 @@ def compute_frequencies_joblib(genome, ksize, strand, nbthread):
         frequencies.reshape(-1, 1)
     return frequencies
 
-def compute_frequencies_joblib_large(genome, ksize, strand, nbthread):
+def compute_frequencies_joblib_memmap(genome, ksize, strand, nbthread):
     """ compute frequencies
     
     Parameters:
@@ -308,6 +338,41 @@ def compute_frequencies_joblib_large(genome, ksize, strand, nbthread):
     return frequencies, freq_name
 
 
+def compute_frequencies_joblib_h5py(genome, ksize, strand, nbthread):
+    """ compute frequencies
+    
+    Parameters:
+    -----------
+    genome: string
+        path to the genome file
+    ksize: int
+        kmer size to use
+    strand: string
+        select genome strand ('both', 'plus', 'minus')
+    workdir: strng
+        temporary working directory to store pickled chunk
+        
+    Return:
+    -------
+    frequencies: numpy.array
+        the samples x features matrix storing NT composition of fasta sequences
+    """
+    folder = tempfile.mkdtemp()
+    freq_name = os.path.join(folder, 'frequencies')
+    
+    # Pre-allocate a writeable shared memory map as a container for the frequencies
+    nb_record = sum(1 for record in SeqIO.parse(genome, "fasta"))
+    
+    with h5py.File(freq_name, "w") as hf:
+        frequencies = hf.create_dataset("frequencies", (nb_record, 4**ksize), dtype="float32")
+    
+    fd = delayed(compute_frequency_h5py)
+    Parallel(n_jobs=nbthread, verbose=0)(fd(freq_name, i, str(record.seq), ksize, strand) 
+                                         for i, record in enumerate(SeqIO.parse(genome, "fasta")))
+    
+    return None, freq_name
+
+
 def compute_frequencies(mthdrun, large, genome, k, strand, 
                         distchunksize, threads_max, workdir):
     """ choose which function to call to compute frequencies
@@ -318,8 +383,10 @@ def compute_frequencies(mthdrun, large, genome, k, strand,
     elif mthdrun == "scoop2":
         frequencies = compute_frequencies_pickle(genome, k, strand, distchunksize, threads_max, workdir)
     elif mthdrun == "joblib":
-        if large:
-            frequencies, freq_name = compute_frequencies_joblib_large(genome, k, strand, threads_max)
+        if large == "memmap":
+            frequencies, freq_name = compute_frequencies_joblib_memmap(genome, k, strand, threads_max)
+        elif large == "h5py":
+            frequencies, freq_name = compute_frequencies_joblib_h5py(genome, k, strand, threads_max)
         else:
             frequencies = compute_frequencies_joblib(genome, k, strand, threads_max) 
     else:

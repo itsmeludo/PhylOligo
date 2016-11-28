@@ -54,7 +54,7 @@ def get_cmd():
     parser.add_argument("--dist-chunk-size", action="store", dest="distchunksize", type=int, default=250,
                         help="the size of the chunk to use in scoop to compute distances")
     parser.add_argument("--method", action="store", choices=["scoop1", "scoop2", "joblib"], dest="mthdrun", help="don't use scoop to compute distances use joblib")
-    parser.add_argument("--large", action="store_true", dest="large", help="used in combination with joblib for large dataset", default=False)
+    parser.add_argument("--large", action="store", dest="large", choices=["None", "memmap", "h5py"], help="used in combination with joblib for large dataset", default="None")
     parser.add_argument("-c", "--cpu", action="store", dest="threads_max", type=int, default=4, 
                         help="how many threads to use for windows microcomposition computation[default:%(default)d]")
     parser.add_argument("-o", "--out", action="store", dest="out_file", default="phyloligo.out", 
@@ -83,7 +83,7 @@ def main():
                                       params.dist, params.threads_max, params.freqchunksize, params.workdir)
         
     # save result in a numpy matrix
-    if not (params.mthdrun == "joblib" and params.large):
+    if not (params.mthdrun == "joblib" and params.large != "None"):
         print("Writing")
         np.savetxt(params.out_file, res, delimiter="\t")
         

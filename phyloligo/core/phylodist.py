@@ -5,6 +5,9 @@ from scoop import futures
 import os, sys
 import subprocess, shlex, shutil
 import tempfile
+import h5py
+
+from phyloligo.core.phyloutils import remove_folder
 
 ## clustering
 import numpy as np
@@ -64,11 +67,14 @@ def JSD(a, b):
         #d = d.T
     return d
 
+def euclidean_distances_loc(output, X, s):
+    distances = euclidean_distances(X, X[s])
+    output[s] = distances.T
+    
 def JSD_loc(output, X, s):
     X, Y = check_pairwise_arrays(X, X[s])
     d = JSD(X, Y)
     output[s] = d
-
 
 def compute_JSD_unpack(params):
     """ unpack parameters to compute distances
@@ -83,6 +89,28 @@ def compute_Eucl_unpack(params):
     i, j, freqi, freqj = params
     d = Eucl(freqi, freqj)
     return i, j, d
+
+def euclidean_distances_h5py(output, input, s):
+    hf = h5py.File(input, "r")
+    X = hf.get("frequencies")
+    dist = euclidean_distances(X, X[s])
+    hf.close()
+    hf = h5py.File(output, "r+")
+    distances = hf.get("distances")
+    distances[s] = dist.T
+    hf.close()
+
+def JSD_h5py(output, input, s):
+    hf = h5py.File(input, "r")
+    X = hf.get("frequencies")
+    X, Y = check_pairwise_arrays(X, X[s])
+    d = JSD(X, Y)
+    hf.close()
+    hf = h5py.File(output, "r+")
+    distances = hf.get("distances")
+    distances[s] = d
+    hf.close()
+    
 
 #### different flavor of parallelisms for distance computation
     
@@ -155,11 +183,6 @@ def compute_distances_pickle(frequencies, chunksize, metric="Eucl", n_jobs=1, wo
         print("Error, unknown method {}".format(metric), file=sys.stderr)
         sys.exit(1)
     return distances
-
-def euclidean_distances_loc(output, X, s):
-    distances = euclidean_distances(X, X[s])
-    output[s] = distances.T
-    
     
 def compute_distances_scoop(frequencies, chunksize, metric="Eucl", localrun=False, n_jobs=1):
     """ compute pairwises distances
@@ -204,7 +227,7 @@ def compute_distances_scoop(frequencies, chunksize, metric="Eucl", localrun=Fals
     return distances
 
 
-def compute_distances_large(frequencies, freq_name, output, metric="Eucl", n_jobs=1):
+def compute_distances_memmap(frequencies, freq_name, output, metric="Eucl", n_jobs=1):
     """ compute pairwises distances
     
     Parameters
@@ -241,8 +264,9 @@ def compute_distances_large(frequencies, freq_name, output, metric="Eucl", n_job
         Parallel(n_jobs=n_jobs, verbose=0)(fd(distances, frequencies, s) for s in gen_even_slices(frequencies.shape[0], n_jobs))
             
         #remove_folder(folder)
-        folder = os.path.dirname(freq_name)
-        remove_folder(folder)
+        #folder = os.path.dirname(freq_name)
+        #remove_folder(folder)
+        print(freq_name)
         
     elif metric == "JSD":
         fd = delayed(JSD_loc)
@@ -258,12 +282,63 @@ def compute_distances_large(frequencies, freq_name, output, metric="Eucl", n_job
     #return distances
 
 
+def compute_distances_h5py(freq_name, dist_name, metric="Eucl", n_jobs=1):
+    """ compute pairwises distances
+    
+    Parameters
+    ----------
+    freq_name: string
+        path of the local frequency array
+    metric: string
+        distance method to use ('JSD', 'Eucl', 'KL')
+    n_jobs: int
+        number of parallel job to execute
+    
+    Return:
+    -------
+    distances: np.array
+        (n_samples, n_samples) distance matrix
+    """
+    #scoop.logger.info("Starting distance computation")
+    #folder = tempfile.mkdtemp()
+    #dist_name = os.path.join(folder, output)
+    folder = os.path.dirname(freq_name)
+    
+    with h5py.File(freq_name, "r") as hf:
+        frequencies = hf.get("frequencies")
+        size = frequencies.shape[0]
+    
+    with h5py.File(dist_name, "w") as hf:
+        distances = hf.create_dataset("distances", (size, size), dtype="float32")
+    
+    if metric == "Eucl":
+        # execute parallel computation of euclidean distance
+        fd = delayed(euclidean_distances_h5py)
+        Parallel(n_jobs=n_jobs, verbose=0)(fd(dist_name, freq_name, s) for s in gen_even_slices(size, n_jobs))
+            
+        print(freq_name)
+        #remove_folder(folder)
+        
+    elif metric == "JSD":
+        fd = delayed(JSD_h5py)
+        Parallel(n_jobs=n_jobs, verbose=0)(fd(dist_name, freq_name, s) for s in gen_even_slices(size, n_jobs))
+        
+        remove_folder(folder)
+            
+    else:
+        print("Error, unknown method {}".format(metric), file=sys.stderr)
+        sys.exit(1)
+    #return distances
+
+
 def compute_distances(mthdrun, large, frequencies, freq_name, out_file, dist, threads_max, freqchunksize, workdir):
     """ choose which function to call to compute distances
     """
     if mthdrun == "joblib":
-        if large:
-            res = compute_distances_large(frequencies, freq_name, out_file, metric=dist, n_jobs=threads_max)
+        if large == "memmap":
+            res = compute_distances_memmap(frequencies, freq_name, out_file, metric=dist, n_jobs=threads_max)
+        if large == "h5py":
+            res = compute_distances_h5py(freq_name, out_file, metric=dist, n_jobs=threads_max)
         else:
             res = compute_distances_scoop(frequencies, freqchunksize, metric=dist, localrun=True, n_jobs=threads_max)
     elif mthdrun == "scoop1":
