@@ -3,46 +3,28 @@ Bioinformatics / Genomics
 Explore oligonucleotide composition similarity between assembly contigs or scaffolds to detect contaminant DNA.
 
 
-Install
--------
-
-sudo pip install phyloligo
-
-or 
-
-pip install phyloligo --user
-
-Requirements
-------------
-
-'biopython>=1.68', 
-'hdbscan',
-'scikit-learn>=0.18.1',
-'numpy>=1.11.2'n
-'cython>=0.25.1',
-
-if installed with pip the requirements will be automatically installed
-
-you can also install them manually
-
-pip install -r requirements.txt
-
-
-
 Generate the all-by-all contig distance matrix
 ----------------------------------------------
 ```bash
 phyloligo.py -d Eucl -i genome.fasta -o genome.Eucl.mat -u 64
 ```
 Parameters:
-* -i	--assembly    multifasta of the genome assembly
-* -k	--lgMot       word length / kmer length / k
-* -s	--strand      Strand used to compute microcomposition. "both", "plus" or "minus"
-* -d	--distance    How to compute distance between two signatures "KL", "Eucl" or "JSD" KL: Kullback-Leibler, Eucl : Euclidean, JSD : Jensen-Shannon divergence
-* -u	--cpu         How many parallel threads to use for microcomposition computation
-* -g    --granularity Factor to refine the granularity of parallel threads. The higher the factor, the greater the number of smaller bins
-* -o    --out         Output file
-* -h    --help        Exactly what it says
+*    -h      --help              Show this help message and exit
+*    -i      --assembly          Multifasta of the genome assembly
+*    -k      --lgMot             word lenght / kmer length / k [default:4]
+*    -s      --strand            Strand used to compute microcomposition. {both,plus,minus} [default:both]
+*    -d      --distance          How to compute distance between two signatures : Eucl : Euclidean[default:Eucl], JSD : Jensen-Shannon divergence{Eucl,JSD}          
+*            --freq-chunk-size   The size of the chunk to use in scoop to compute frequencies
+*            --dist-chunk-size   The size of the chunk to use in scoop to compute distances
+*            --method            Which computaional optimisation to use to compute distances {scoop1,scoop2,joblib}            
+*            --large             Used in combination with joblib for large datasets
+*    -c      --cpu               How many threads to use for contigs microcomposition computation[default:4]                
+*    -o      --out               Output file[default:phyloligo.out]
+*   -w      --workdir           Working directory
+
+
+
+
  
 
 Regroup contigs by compositional similarity on a tree and explore branching
@@ -75,18 +57,54 @@ Parameters:
 note: PhyloSelect uses the library Ape and its interactive clade selection function on a tree plot with the mouse. X11 is therefore required. If the program has to run on a server -typically for memory reasons- please use the -X option of ssh to allow X11 forwarding.
 
 
+
+
+Regroup contigs by compositional similarity by hierachical DBSCAN and MDS diplay by t-SNE
+-----------------------------------------------------------------------------------------
+
+```bash
+phyloselect.py -i Mgenome.JSD.mat -t -m hdbscan --noX -o genome_conta
+
+
+```
+Parameters:
+*    -h      --help          Show this help message and exit
+*    -i                      The input matrix file
+*    -t                      Perform t-SNE for visualization and pre-clustering
+*    -p                      Change the perplexity value for t-SNE
+*    -m                      Method to use to compute cluster on transformed distance matrix{hdbscan,kmedoids}
+*           --minclustersize Set the minimal cluster size of an HDBSCAN cluster
+*           --minsamples     Set the minimal sample size of an HDBSCAN cluster
+*    -k                      Number of clusters if kmedoids is used
+*    -f                      Path of the original fasta file used for the computation of the distance matrix                 
+*           --interactive    Allow the user to run the script in an interactive mode and change clustering parameter on the fly (require -t)
+*           --large          Used in combination with joblib for large dataset
+*           --noX            Instead of showing pictures, store them in pdf
+*    -o                      OUTPUTDIR
+
+
+
+
+
+
+
+
+
+
 Install
 -------
 
 * Dependencies:
     * Python 3.x
         * [BioPython](biopython.org)
+        * [sklearn](http://scikit-learn.org/stable/install.html)
         * [Numpy](numpy.org)
-        * [Hdbscan](https://pypi.python.org/pypi/hdbscan)
-	* [Seaborn] (http://seaborn.pydata.org)
-        * [Matplotlib](http://matplotlib.org)
+        * [matplotlib](http://matplotlib.org)
+        * [hdbscan](https://pypi.python.org/pypi/hdbscan)
+	* [seaborn] (http://seaborn.pydata.org)
         * [Cython](http://cython.org)
-        * [H5py](http://www.h5py.org)
+        * [h5py](http://www.h5py.org)
+        * [kmedoids](??????)
     * R 3.x
         * [ape](http://ape-package.ird.fr)
 	* [gplots](https://cran.r-project.org/web/packages/gplots/index.html)
@@ -94,7 +112,7 @@ Install
         * [gtools](https://cran.r-project.org/web/packages/gtools/index.html)
     * [EMBOSS](http://emboss.sourceforge.net/download)
     * [Samtools](http://www.htslib.org/)
-    * X11 (only required to run phyloselect)
+    * X11 (only required to run phyloselect.R)
 
 * Install python3, the latest R version, EMBOSS and Samtools [according to your system](https://xkcd.com/1654/) 
 
@@ -104,12 +122,14 @@ In the Bash/Shell, as root/admin if wanted installed globally.
 apt-get install python3-dev python3-setuptools r-base emboss samtools
 easy_install3 -U setuptools
 pip3 install biopython 
+pip3 install sklearn
 pip3 install cython
 pip3 install numpy
 pip3 install matplotlib
 pip3 install seaborn
 pip3 install h5py 
 pip3 install hdbscan 
+pip3 install kmedoids 
 ```
 
 in R, as root or user
@@ -129,5 +149,4 @@ or download it from https://github.com/itsmeludo/PhylOligo
 ```Bash
 cd PhylOligo
 export PATH="$PATH:`pwd`"
-sudo ln -s `pwd`/{phyloligo.py,phyloselect.R} /usr/local/bin/
 ```
