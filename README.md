@@ -40,8 +40,8 @@ Parameters:
 ```
     -i     --matrix                      all-by-all contig distance matrix, tab separated (required)
     -a     --assembly                    multifasta file of the contigs (required)
-    -f     --tree_draw_method            tree building type. [phylogram, cladogram, fan, unrooted, radial] by default cladogram.
-    -t     --tree_building_method        tree drawing type [NJ, UPGMA, BIONJ, wardD, wardD2, Hsingle, Hcomplete, WPGMA, WPGMC, UPGMC] by default NJ.
+    -f     --tree_draw_method            tree building type. {phylogram,cladogram,fan,unrooted,radial} by default cladogram.
+    -t     --tree_building_method        tree drawing type {NJ,UPGMA,BIONJ,wardD,wardD2,Hsingle,Hcomplete,WPGMA,WPGMC,UPGMC} by default NJ.
     -m     --matrix_heatmap              Should a matrix heatmap should be produced
     -c     --distance_clip_percentile    Threshold to exclude very distant contigs based on the distance distribution. Use if the tree is squashed by repeats or degenerated/uninformative contigs [0.97]
     -s     --contig_min_size             Min length in bp of contigs to use in the matrix and tree. Use if the tree is squashed by repeats or degenerated/uninformative contigs [4000]
