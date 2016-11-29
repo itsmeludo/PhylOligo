@@ -310,7 +310,7 @@ def main():
     # plot the different classes if reduction of dimentionality
     if params.performtsne and not params.interactive:
         pathout = os.path.join(params.outputdir, "data_tsne_reduc.pdf")
-        print("Save tsne clustering projection in ".format(pathout))
+        print("Save tsne clustering projection in {}".format(pathout))
         plot_labels(data, labels_pred, params.method, pathout)
     elif params.interactive:
         # loop until user is satisfied
@@ -390,9 +390,6 @@ def main():
                 else:
                     print("Unknown method name {}".format(method))
                     sys.exit(1)
-                
-        
-        ²
           
     # write cluster indexes
     pathout = os.path.join(params.outputdir, "data_cluster_indexes.dat")

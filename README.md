@@ -118,7 +118,6 @@ Exhaustive procedure:
         * [seaborn] (http://seaborn.pydata.org)
         * [Cython](http://cython.org)
         * [h5py](http://www.h5py.org)
-        * [kmedoids](??????)
     * R 3.x
         * [ape](http://ape-package.ird.fr)
         * [gplots](https://cran.r-project.org/web/packages/gplots/index.html)
@@ -145,6 +144,12 @@ pip3 install h5py
 pip3 install hdbscan 
 pip3 install kmedoids 
 ```
+
+
+```Bash
+pip3 install -r requirements.txt
+```
+
 
 * In R, as root or user
 ```R
