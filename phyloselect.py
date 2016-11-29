@@ -9,7 +9,7 @@ import tempfile, time
 
 from Bio import SeqIO
 
-from phyloligo.core.kmedoids import KMedoids
+from kmedoids import KMedoids
 import hdbscan
 import numpy as np
 import h5py
