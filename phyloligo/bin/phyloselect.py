@@ -9,7 +9,7 @@ import tempfile, time
 
 from Bio import SeqIO
 
-from kmedoids import KMedoids
+from phylolibo.core.kmedoids import KMedoids
 import hdbscan
 import numpy as np
 import sklearn.cluster as cluster

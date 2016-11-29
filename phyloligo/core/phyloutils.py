@@ -63,3 +63,8 @@ def select_strand (seq, strand="both"):
         print("Error, strand parameter of selectd_strand() should be choose from {'both', 'minus', 'plus'}", file=sys.stderr)
         sys.exit(1)
     return new_seq
+
+def get_nb_records(fasta, file_format="fasta"):
+    """ compute the number of sequences in a fasta file
+    """
+    return sum(1 for record in SeqIO.parse(fasta, file_format))
