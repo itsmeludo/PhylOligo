@@ -10,7 +10,6 @@ phyloligo.py -d JSD -i genome.fasta -o genome.JSD.mat -u 64
 ```
 Parameters:
 ```
-    -h      --help              Show this help message and exit
     -i      --assembly          Multifasta of the genome assembly
     -k      --lgMot             word lenght / kmer length / k [default:4]
     -s      --strand            Strand used to compute microcomposition. {both,plus,minus} [default:both]
@@ -21,7 +20,8 @@ Parameters:
             --large             Used in combination with joblib for large datasets
     -c      --cpu               How many threads to use for contigs microcomposition computation[default:4]                
     -o      --out               Output file[default:phyloligo.out]
-   -w      --workdir           Working directory
+    -w      --workdir           Working directory
+    -h      --help              Show this help message and exit
 ```
 
 
@@ -61,17 +61,16 @@ note: PhyloSelect uses the library Ape and its interactive clade selection funct
 
 
 
-Regroup contigs by compositional similarity by hierachical DBSCAN and MDS diplay by t-SNE
------------------------------------------------------------------------------------------
+Regroup contigs by compositional similarity: hierarchical DBSCAN and MDS display with t-SNE
+-------------------------------------------------------------------------------------------
 
 ```bash
-phyloselect.py -i Mgenome.JSD.mat -t -m hdbscan --noX -o genome_conta
+phyloselect.py -i genome.JSD.mat -t -m hdbscan --noX -o genome_conta
 
 
 ```
 Parameters:
 ```
-    -h      --help          Show this help message and exit
     -i                      The input matrix file
     -t                      Perform t-SNE for visualization and pre-clustering
     -p                      Change the perplexity value for t-SNE
@@ -84,10 +83,8 @@ Parameters:
            --large          Used in combination with joblib for large dataset
            --noX            Instead of showing pictures, store them in pdf
     -o                      OUTPUTDIR
+    -h      --help          Show this help message and exit
 ```
-:wq
-
-
 
 
 
@@ -96,6 +93,20 @@ Parameters:
 
 Install
 -------
+
+Easy mode:
+
+```Bash
+#Ubuntu/Debian-based
+apt-get install python3-dev python3-setuptools r-base emboss samtools git
+easy_install3 -U setuptools
+git clone https://github.com/itsmeludo/PhylOligo.git
+cd PhylOligo
+pip3 install .
+```
+
+
+Exhaustive procedure:
 
 * Dependencies:
     * Python 3.x
@@ -116,9 +127,10 @@ Install
     * [Samtools](http://www.htslib.org/)
     * X11 (only required to run phyloselect.R)
 
+    
 * Install python3, the latest R version, EMBOSS and Samtools [according to your system](https://xkcd.com/1654/) 
 
-In the Bash/Shell, as root/admin if wanted installed globally.
+* In the Bash/Shell, as root/admin if wanted installed globally.
 ```Bash
 #Ubuntu/Debian-based
 apt-get install python3-dev python3-setuptools r-base emboss samtools
@@ -134,20 +146,19 @@ pip3 install hdbscan
 pip3 install kmedoids 
 ```
 
-in R, as root or user
+* In R, as root or user
 ```R
 install.packages(c("ape","getopt","gplots"))
 ```
 
-* clone the repo
-
+* Clone the repo
 ```Bash
 git clone https://github.com/itsmeludo/PhylOligo.git
 ```
 or download it from https://github.com/itsmeludo/PhylOligo
 
-* Link the programs into a directory listed in your $PATH
 
+* Link the programs into a directory listed in your $PATH
 ```Bash
 cd PhylOligo
 export PATH="$PATH:`pwd`"
