@@ -268,26 +268,36 @@ def compute_distances_memmap(frequencies, freq_name, output, metric="Eucl", n_jo
         fd = delayed(euclidean_distances_loc)
         Parallel(n_jobs=n_jobs, verbose=0)(fd(distances, frequencies, s) for s in gen_even_slices(frequencies.shape[0], n_jobs))
             
-        #remove_folder(folder)
-        #folder = os.path.dirname(freq_name)
-        #remove_folder(folder)
+        folder = os.path.dirname(freq_name)
+        remove_folder(folder)
         print(freq_name)
         
     elif metric == "JSD":
         fd = delayed(JSD_loc)
         Parallel(n_jobs=n_jobs, verbose=0)(fd(distances, frequencies, s) for s in gen_even_slices(frequencies.shape[0], n_jobs))
         
-        #remove_folder(folder)
         folder = os.path.dirname(freq_name)
         remove_folder(folder)
             
     else:
         print("Error, unknown method {}".format(metric), file=sys.stderr)
         sys.exit(1)
-    #return distances
-
 
 def join_distance_results(dist_folder, dist_name, size, n_jobs):
+    """ join the different distances computation into a single matrix
+    
+    Parameters
+    ----------
+    dist_folder: string
+        path to the distance folder storing all distances computation
+    dist_name: string
+        path to the final matrix
+    size: int
+        size of the final matrix
+    n_jobs: int
+        number of jobs used, the names of the files storing distances 
+        depend on the number of jobs and on the size of the matrix
+    """
     with h5py.File(dist_name, "w") as hf:
         distances = hf.create_dataset("distances", (size, size), dtype="float32")
         for s in gen_even_slices(size, n_jobs):
@@ -334,8 +344,8 @@ def compute_distances_h5py(freq_name, dist_name, metric="Eucl", n_jobs=1):
         #for s in gen_even_slices(size, n_jobs):
             #euclidean_distances_h5py(dist_folder, freq_name, s)
             
-        print(freq_name)
-        #remove_folder(folder)
+        #print(freq_name)
+        remove_folder(folder)
         
     elif metric == "JSD":
         fd = delayed(JSD_h5py)
@@ -349,8 +359,7 @@ def compute_distances_h5py(freq_name, dist_name, metric="Eucl", n_jobs=1):
         
     # join distance results
     join_distance_results(dist_folder, dist_name, size, n_jobs)
-    #return distances
-
+    
 
 def compute_distances(mthdrun, large, frequencies, freq_name, out_file, dist, threads_max, freqchunksize, workdir):
     """ choose which function to call to compute distances

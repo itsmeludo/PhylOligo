@@ -6,7 +6,7 @@ import os, sys, re
 import tempfile
 import shlex, subprocess, pickle
 import h5py
-from .phyloutils import select_strand
+from .phyloutils import select_strand, get_nb_records
 
 from Bio import SeqIO
 
@@ -324,7 +324,7 @@ def compute_frequencies_joblib_memmap(genome, ksize, strand, nbthread):
     
     
     # Pre-allocate a writeable shared memory map as a container for the frequencies
-    nb_record = sum(1 for record in SeqIO.parse(genome, "fasta"))
+    nb_record = get_nb_records(genome)
     frequencies = np.memmap(freq_name, dtype=np.float32, shape=(nb_record, 4**ksize), mode='w+')
     #print(freq_name)
     del frequencies
@@ -392,7 +392,7 @@ def compute_frequencies_joblib_h5py(genome, ksize, strand, nbthread):
     
     # now join the results
     freq_name = join_freq_results(folder, nb_record, ksize)
-    print(folder)
+    #print(folder)
     return None, freq_name
 
 

@@ -9,9 +9,10 @@ import tempfile, time
 
 from Bio import SeqIO
 
-from kmedoids import KMedoids
+from phyloligo.core.kmedoids import KMedoids
 import hdbscan
 import numpy as np
+import h5py
 import sklearn.cluster as cluster
 from sklearn.manifold import TSNE
 
@@ -45,7 +46,7 @@ def get_cmd():
     parser.add_argument("--interactive", action="store_true", dest="interactive", default=False,
                         help="allow the user to run the script in an interactive mode and change "
                         "clustering parameter on the fly (require -t)")
-    parser.add_argument("--large", action="store_true", dest="large", help="used in combination with "
+    parser.add_argument("--large", action="store", choices=["memmap", "h5py"], dest="large", help="used in combination with "
                         "joblib for large dataset", default=False)
     parser.add_argument("--noX", action="store_true", dest="noX", help="instead of showing pictures, "
                         "store them in pdf")
@@ -261,16 +262,23 @@ def main():
     
     # get matrix and transform the data to a bidimensional set of point with tsne
     print("Read matrix")
-    if params.large:
-        # if matrix was created using --large option read it as a memmap matrix
-        matrix = np.memmap(params.distmat, dtype=np.float32, mode="r")
-        s = matrix.shape[0]
-        n = np.sqrt(s)
-        if str(n).split(".")[1] != "0":
-            print("Error, weird shape for matrix {}".format(params.distmat), file=sys.stderr)
-            sys.exit(1)
-        matrix = matrix.reshape((int(n), int(n)))
+    if params.large != []:
+        if params.large == "memmap":
+            # if matrix was created using --large option read it as a memmap matrix
+            matrix = np.memmap(params.distmat, dtype=np.float32, mode="r")
+            s = matrix.shape[0]
+            n = np.sqrt(s)
+            if str(n).split(".")[1] != "0":
+                print("Error, weird shape for matrix {}".format(params.distmat), file=sys.stderr)
+                sys.exit(1)
+            matrix = matrix.reshape((int(n), int(n)))
+        elif params.large == "h5py":
+            # read matrix as a h5py file
+            with h5py.File(params.distmat, "r") as hf:
+                matrix = hf.get("distances")
+                matrix = matrix.value[:]
     else:
+        # numpy savetxt matrix
         matrix = read_distmat(params.distmat)
         
     if params.performtsne:
@@ -302,6 +310,7 @@ def main():
     # plot the different classes if reduction of dimentionality
     if params.performtsne and not params.interactive:
         pathout = os.path.join(params.outputdir, "data_tsne_reduc.pdf")
+        print("Save tsne clustering projection in ".format(pathout))
         plot_labels(data, labels_pred, params.method, pathout)
     elif params.interactive:
         # loop until user is satisfied
@@ -382,12 +391,12 @@ def main():
                     print("Unknown method name {}".format(method))
                     sys.exit(1)
                 
-            
-        pathout = os.path.join(params.outputdir, "data_tsne_reduc.pdf")
+        
+        ²
           
     # write cluster indexes
-    print("Store cluster indexes")
     pathout = os.path.join(params.outputdir, "data_cluster_indexes.dat")
+    print("Store cluster indexes in {}".format(pathout))
     all_classes = np.unique(labels_pred)
     with open(pathout, "w") as outf:
         for cl in all_classes:
@@ -396,6 +405,7 @@ def main():
                 outf.write("{} {}\n".format(cl, idx))
                 
     if params.fastafile:
+        print("Write fasta per classes in {}/data_fasta_*.fa".format(params.outputdir))
         write_fastafile(labels_pred, params.fastafile, params.outputdir)
         
     return 0
