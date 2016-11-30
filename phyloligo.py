@@ -24,7 +24,7 @@ See the help by calling the program without any argument.
 """
 
 __author__  = "Tristan Bitard-Feildel, Ludovic Mallet"
-__email__   = "tristan.bitard-feildel@impmc.upmc.fr, Ludovic.mallet@inrafr"
+__email__   = "tristan.bitard-feildel@impmc.upmc.fr, Ludovic.mallet@inra.fr"
 __year__    = 2016
 __licence__ = "GPLv3"
 __version__ = 0.1
@@ -527,6 +527,41 @@ def cut_sequence_and_count(seq, ksize):
     kword_count = sum(count_words.values())
     return count_words, kword_count
 
+
+
+def cut_sequence_and_count_pattern(seq, pattern):
+    """ cut sequence in spaced-words of size k 
+    
+    Parameters:
+    -----------
+    seq: string
+        The nucleotide sequence
+    pattern: string
+        the binary space pattern to extract spaced-words example: 1001010001 ksize is inferred from the number of '1' in the pattern
+        
+    Return:
+    -------
+    count_words: dict
+        a dictionary storing the number of observations of each word
+    kword_count: int
+        the total number of words
+    """
+    seq_words = list()
+    ksize=pattern.count('1')
+    target_index = [i  for i,j in enumerate(pattern) if j=="1"]
+
+    # re.split: excludes what is not a known characterised nucleotide 
+    for subseq in re.split('[^ACGT]+', seq): 
+        if (len(subseq) >= len(pattern)):
+            #get all kword in sub-sequence
+            seq_words.extend("".join(list(map( lambda x: subseq[i+x], target_index))) for i in range(len(subseq)-(len(pattern)-1)))
+    count_words = Counter(seq_words)
+    kword_count = sum(count_words.values())
+    return count_words, kword_count
+
+
+
+
 def count2freq(count_words, kword_count, ksize):
     """ transform raw count into a feature vector of frequencies
     
@@ -906,6 +941,7 @@ def get_cmd():
     parser.add_argument("-o", "--out", action="store", dest="out_file", default="phyloligo.out", 
                         help="output file[default:%(default)s]")
     parser.add_argument("-w", "--workdir", action="store", dest="workdir", help="working directory", required=True)
+    parser.add_argument("-p", "--pattern", action="store", dest="pattern", help="spaced-word pattern")
     
     
     params = parser.parse_args()

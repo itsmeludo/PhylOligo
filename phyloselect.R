@@ -327,7 +327,7 @@ names(lengths)<-labels
 
 if (opt[["distance_clip_percentile"]]){
     if (opt[["verbose"]]) print(paste(date(), "Clipping matrix outlyers"))
-    medians=apply(dist_matrix,1,mean)
+    medians=apply(dist_matrix,1,median)
     indexes=which(medians<=quantile(medians,probs=opt[["distance_clip_percentile"]]))
     dist_matrix = dist_matrix[indexes,indexes]
     labels = labels[indexes]
