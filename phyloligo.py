@@ -941,7 +941,7 @@ def get_cmd():
     parser.add_argument("-o", "--out", action="store", dest="out_file", default="phyloligo.out", 
                         help="output file[default:%(default)s]")
     parser.add_argument("-w", "--workdir", action="store", dest="workdir", help="working directory", required=True)
-    parser.add_argument("-p", "--pattern", action="store", dest="pattern", help="spaced-word pattern")
+    parser.add_argument("-p", "--pattern", action="store", dest="pattern", help="spaced-word pattern string, only containing 1s and 0s, i.e. '100101001', no default")
     
     
     params = parser.parse_args()
