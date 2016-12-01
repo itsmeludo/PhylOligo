@@ -50,6 +50,9 @@ from sklearn.metrics.pairwise import pairwise_distances
 from sklearn.metrics.pairwise import check_pairwise_arrays
 from sklearn.utils import gen_even_slices
 
+# TODO
+# to be tested and added as option
+SCALING = 1
 
 np.seterr(divide='ignore', invalid='ignore')
 
@@ -61,7 +64,7 @@ def remove_folder(folder):
     except:
         print("Failed to delete folder: {}".format(folder))
 
-def read_seq_chunk(genome, chunksize, ksize, strand):
+def read_seq_chunk_pos(genome, chunksize):
     """ read a first chunk of fasta sequences to be processed
     
     Parameters:
@@ -70,7 +73,34 @@ def read_seq_chunk(genome, chunksize, ksize, strand):
         path to the genome file
     chunksize: int
         the number of fasta entries to read
-        
+    
+    Return:
+    -------
+    seqchunk: list
+        a list of SeqRecord 
+    """
+    seqchunk = list()
+    start = 0
+    for record in SeqIO.parse(genome, "fasta"):
+        seqchunk.append(str(record.seq))
+        if len(seqchunk) == chunksize:
+            yield start, start + chunksize, seqchunk
+            start += chunksize
+            seqchunk = list()
+    # the last chunk 
+    if seqchunk != []:
+        yield start, start+len(seqchunk), seqchunk
+
+def read_seq_chunk(genome, chunksize, pattern, strand):
+    """ read a first chunk of fasta sequences to be processed
+    
+    Parameters:
+    -----------
+    genome: string
+        path to the genome file
+    chunksize: int
+        the number of fasta entries to read
+    
     Return:
     -------
     seqchunk: list
@@ -78,13 +108,14 @@ def read_seq_chunk(genome, chunksize, ksize, strand):
     """
     seqchunk = list()
     for record in SeqIO.parse(genome, "fasta"):
-        seqchunk.append((str(record.seq), ksize, strand))
+        seqchunk.append((str(record.seq), pattern, strand))
         if len(seqchunk) == chunksize:
             yield seqchunk
             seqchunk = list()
     # the last chunk 
     if seqchunk != []:
         yield seqchunk
+
 
 def select_strand (seq, strand="both"):
     """ choose which strand to work on
@@ -294,7 +325,7 @@ def compute_distances_pickle(frequencies, chunksize, metric="Eucl", n_jobs=1, wo
         sys.exit(1)
     return distances
     
-def compute_distances_scoop(frequencies, chunksize, metric="Eucl", localrun=False, n_jobs=1):
+def compute_distances_scoop(frequencies, chunksize, metric="Eucl", n_jobs=1):
     """ compute pairwises distances
     
     Parameters
@@ -313,29 +344,49 @@ def compute_distances_scoop(frequencies, chunksize, metric="Eucl", localrun=Fals
     """
     #scoop.logger.info("Starting distance computation")
     if metric == "Eucl":
-        if localrun:
-            distances = pairwise_distances(frequencies, metric=Eucl, n_jobs=n_jobs)
-        else:
-            distances = np.zeros((len(frequencies), len(frequencies)), dtype=float)
-            for freqchunk in make_freqchunk(frequencies, chunksize):
-                res = futures.map(compute_Eucl_unpack, freqchunk)
-                for i, j, d in res:
-                    distances[i, j] = distances[j, i] = d
+        distances = np.zeros((len(frequencies), len(frequencies)), dtype=float)
+        for freqchunk in make_freqchunk(frequencies, chunksize):
+            res = futures.map(compute_Eucl_unpack, freqchunk)
+            for i, j, d in res:
+                distances[i, j] = distances[j, i] = d
     elif metric == "JSD":
-        if localrun:
-            distances = pairwise_distances(frequencies, metric=JSD, n_jobs=n_jobs)
-        else:
-            distances = np.zeros((len(frequencies), len(frequencies)), dtype=float)
-            for freqchunk in make_freqchunk(frequencies, chunksize):
-                res = futures.map(compute_JSD_unpack, freqchunk)
-                for i, j, d in res:
-                    distances[i, j] = distances[j, i] = d
-    
+        distances = np.zeros((len(frequencies), len(frequencies)), dtype=float)
+        for freqchunk in make_freqchunk(frequencies, chunksize):
+            res = futures.map(compute_JSD_unpack, freqchunk)
+            for i, j, d in res:
+                distances[i, j] = distances[j, i] = d
     else:
         print("Error, unknown method {}".format(metric), file=sys.stderr)
         sys.exit(1)
     return distances
 
+def compute_distances_joblib(frequencies, chunksize, metric="Eucl", n_jobs=1):
+    """ compute pairwises distances
+      
+    Parameters
+    ----------
+    frequencies: np.array
+        a list of frequencies, each row corresponding to a sample each column to a "word"
+    metric: string
+        distance method to use ('JSD', 'Eucl', 'KL')
+    n_jobs: int
+        number of parallel job to execute
+    
+    Return:
+    -------
+    distances: np.array
+        (n_samples, n_samples) distance matrix
+    """
+
+    if metric == "Eucl":
+        distances = pairwise_distances(frequencies, metric=Eucl, n_jobs=n_jobs)
+    elif metric == "JSD":
+        distances = pairwise_distances(frequencies, metric=JSD, n_jobs=n_jobs)
+    
+    else:
+        print("Error, unknown method {}".format(metric), file=sys.stderr)
+        sys.exit(1)
+    return distances
 
 def compute_distances_memmap(frequencies, freq_name, output, metric="Eucl", n_jobs=1):
     """ compute pairwises distances
@@ -371,15 +422,15 @@ def compute_distances_memmap(frequencies, freq_name, output, metric="Eucl", n_jo
     if metric == "Eucl":
         # execute parallel computation of euclidean distance
         fd = delayed(euclidean_distances_loc)
-        Parallel(n_jobs=n_jobs, verbose=0)(fd(distances, frequencies, s) for s in gen_even_slices(frequencies.shape[0], n_jobs))
+        Parallel(n_jobs=n_jobs, verbose=0)(fd(distances, frequencies, s) for s in gen_even_slices(frequencies.shape[0], n_jobs*SCALING))
             
         folder = os.path.dirname(freq_name)
         remove_folder(folder)
-        print(freq_name)
+        #print(freq_name)
         
     elif metric == "JSD":
         fd = delayed(JSD_loc)
-        Parallel(n_jobs=n_jobs, verbose=0)(fd(distances, frequencies, s) for s in gen_even_slices(frequencies.shape[0], n_jobs))
+        Parallel(n_jobs=n_jobs, verbose=0)(fd(distances, frequencies, s) for s in gen_even_slices(frequencies.shape[0], n_jobs*SCALING))
         
         folder = os.path.dirname(freq_name)
         remove_folder(folder)
@@ -405,11 +456,12 @@ def join_distance_results(dist_folder, dist_name, size, n_jobs):
     """
     with h5py.File(dist_name, "w") as hf:
         distances = hf.create_dataset("distances", (size, size), dtype="float32")
-        for s in gen_even_slices(size, n_jobs):
-            pathin = os.path.join(dist_folder, "distance_{}_{}".format(s.start, s.stop))
+        for res in os.listdir(dist_folder):
+            tmp = res.split("_")
+            start, stop = int(tmp[1]), int(tmp[2])
+            pathin = os.path.join(dist_folder, "distance_{}_{}".format(start, stop))
             with h5py.File(pathin, "r") as inf:
-                distances[s] = inf.get("distances").value[:]
-
+                distances[start: stop] = inf.get("distances").value[:]
 
 def compute_distances_h5py(freq_name, dist_name, metric="Eucl", n_jobs=1):
     """ compute pairwises distances
@@ -445,11 +497,11 @@ def compute_distances_h5py(freq_name, dist_name, metric="Eucl", n_jobs=1):
     if metric == "Eucl":
         # execute parallel computation of euclidean distance
         fd = delayed(euclidean_distances_h5py)
-        Parallel(n_jobs=n_jobs, verbose=0)(fd(dist_folder, freq_name, s) for s in gen_even_slices(size, n_jobs))
+        Parallel(n_jobs=n_jobs, verbose=0)(fd(dist_folder, freq_name, s) for s in gen_even_slices(size, n_jobs*SCALING)) # some scaling
         
     elif metric == "JSD":
         fd = delayed(JSD_h5py)
-        Parallel(n_jobs=n_jobs, verbose=0)(fd(dist_folder, freq_name, s) for s in gen_even_slices(size, n_jobs))
+        Parallel(n_jobs=n_jobs, verbose=0)(fd(dist_folder, freq_name, s) for s in gen_even_slices(size, n_jobs*SCALING)) # some scaling
             
     else:
         print("Error, unknown method {}".format(metric), file=sys.stderr)
@@ -469,17 +521,14 @@ def compute_distances(mthdrun, large, frequencies, freq_name, out_file, dist, th
         if large == "h5py":
             res = compute_distances_h5py(freq_name, out_file, metric=dist, n_jobs=threads_max)
         else:
-            res = compute_distances_scoop(frequencies, freqchunksize, metric=dist, localrun=True, n_jobs=threads_max)
+            res = compute_distances_joblib(frequencies, freqchunksize, metric=dist, n_jobs=threads_max)
     elif mthdrun == "scoop1":
-        res = compute_distances(frequencies, freqchunksize, metric=dist, localrun=False, n_jobs=threads_max)
+        res = compute_distances_scoop(frequencies, freqchunksize, metric=dist, n_jobs=threads_max)
     elif mthdrun == "scoop2":
         res = compute_distances_pickle(frequencies, freqchunksize, metric=dist, n_jobs=threads_max, workdir=workdir)
     else:
         print("Error, method {} is not implemented for pairwise distances computation".format(mthdrun), file=sys.stderr)
-        
     return res
-
-
 
 #### Compute frequencies
 
@@ -499,35 +548,33 @@ def make_freqchunk(frequencies, chunksize):
     if chunk != []:
         yield chunk
 
-
-def cut_sequence_and_count(seq, ksize):
-    """ cut sequence in words of size k
+# TODO to be removed
+#def cut_sequence_and_count(seq, ksize):
+    #""" cut sequence in words of size k
     
-    Parameters:
-    -----------
-    seq: string
-        The nucleotide sequence
-    ksize: int
-        The size of the kmer
+    #Parameters:
+    #-----------
+    #seq: string
+        #The nucleotide sequence
+    #ksize: int
+        #The size of the kmer
     
-    Return:
-    -------
-    count_words: dict
-        a dictionary storing the number of observations of each word
-    kword_count: int
-        the total number of words
-    """
-    seq_words = list()
-    # re.split: excludes what is not a known characterised nucleotide 
-    for subseq in re.split('[^ACGT]+', seq): 
-        if (len(subseq) >= ksize):
-            #get all kword in sub-sequence
-            seq_words.extend(subseq[i: i+ksize] for i in range(len(subseq)-(ksize-1)))  
-    count_words = Counter(seq_words)
-    kword_count = sum(count_words.values())
-    return count_words, kword_count
-
-
+    #Return:
+    #-------
+    #count_words: dict
+        #a dictionary storing the number of observations of each word
+    #kword_count: int
+        #the total number of words
+    #"""
+    #seq_words = list()
+    ## re.split: excludes what is not a known characterised nucleotide 
+    #for subseq in re.split('[^ACGT]+', seq): 
+        #if (len(subseq) >= ksize):
+            ##get all kword in sub-sequence
+            #seq_words.extend(subseq[i: i+ksize] for i in range(len(subseq)-(ksize-1)))  
+    #count_words = Counter(seq_words)
+    #kword_count = sum(count_words.values())
+    #return count_words, kword_count
 
 def cut_sequence_and_count_pattern(seq, pattern):
     """ cut sequence in spaced-words of size k 
@@ -537,7 +584,8 @@ def cut_sequence_and_count_pattern(seq, pattern):
     seq: string
         The nucleotide sequence
     pattern: string
-        the binary space pattern to extract spaced-words example: 1001010001 ksize is inferred from the number of '1' in the pattern
+        the binary space pattern to extract spaced-words example: 1001010001 
+        ksize is inferred from the number of '1' in the pattern
         
     Return:
     -------
@@ -547,7 +595,7 @@ def cut_sequence_and_count_pattern(seq, pattern):
         the total number of words
     """
     seq_words = list()
-    ksize=pattern.count('1')
+    #ksize=pattern.count('1')
     target_index = [i  for i,j in enumerate(pattern) if j=="1"]
 
     # re.split: excludes what is not a known characterised nucleotide 
@@ -558,9 +606,6 @@ def cut_sequence_and_count_pattern(seq, pattern):
     count_words = Counter(seq_words)
     kword_count = sum(count_words.values())
     return count_words, kword_count
-
-
-
 
 def count2freq(count_words, kword_count, ksize):
     """ transform raw count into a feature vector of frequencies
@@ -592,15 +637,16 @@ def count2freq(count_words, kword_count, ksize):
         features = [0 for kword in range(4**ksize)]
     return np.array(features)
 
-def compute_frequency(seq, ksize=4, strand="both"):
+def compute_frequency(seq, pattern="1111", strand="both"):
     """ compute kmer frequency, ie feature vector of each read
     
     Parameters:
     -----------
     seq: string
         The nucleotide sequence
-    ksize: int
-        The size of the kmer
+    pattern: string
+        the binary space pattern to extract spaced-words example: 1001010001 
+        ksize is inferred from the number of '1' in the pattern
     strand: string
         which strand to used
         
@@ -613,12 +659,14 @@ def compute_frequency(seq, ksize=4, strand="both"):
     # we work on upper case letters
     seq = seq.upper()
     # raw word count
-    count_words, kword_count = cut_sequence_and_count(seq, ksize)
+    #count_words, kword_count = cut_sequence_and_count(seq, ksize)
+    ksize = pattern.count("1")
+    count_words, kword_count = cut_sequence_and_count_pattern(seq, pattern)
     # create feature vector
     features = count2freq(count_words, kword_count, ksize)
     return features
 
-def compute_frequency_memmap(frequency, i, seq, ksize=4, strand="both"):
+def compute_frequency_memmap(frequency, i, seq, pattern="1111", strand="both"):
     """ function used in joblib to write in the memmap array frequency
     
     Parameters:
@@ -629,8 +677,9 @@ def compute_frequency_memmap(frequency, i, seq, ksize=4, strand="both"):
         index of the sequence
     seq: string
         The nucleotide sequence
-    ksize: int
-        The size of the kmer
+    pattern: string
+        the binary space pattern to extract spaced-words example: 1001010001 
+        ksize is inferred from the number of '1' in the pattern
     strand: string
         which strand to used
         
@@ -639,11 +688,13 @@ def compute_frequency_memmap(frequency, i, seq, ksize=4, strand="both"):
     # we work on upper case letters
     seq = seq.upper()
     # raw word count
-    count_words, kword_count = cut_sequence_and_count(seq, ksize)
+    #count_words, kword_count = cut_sequence_and_count(seq, ksize)
+    ksize = pattern.count("1")
+    count_words, kword_count = cut_sequence_and_count_pattern(seq, pattern)
     # create feature vector
     frequency[i] = count2freq(count_words, kword_count, ksize)
     
-def compute_frequency_h5py(freq_name_folder, i, seq, ksize=4, strand="both"):
+def compute_frequency_h5py(freq_name_folder, i, seq, pattern="1111", strand="both"):
     """ function used in joblib to write in the h5py array frequency
     
     Parameters:
@@ -654,8 +705,9 @@ def compute_frequency_h5py(freq_name_folder, i, seq, ksize=4, strand="both"):
         index of the sequence
     seq: string
         The nucleotide sequence
-    ksize: int
-        The size of the kmer
+    pattern: string
+        the binary space pattern to extract spaced-words example: 1001010001 
+        ksize is inferred from the number of '1' in the pattern
     strand: string
         which strand to used
         
@@ -664,7 +716,9 @@ def compute_frequency_h5py(freq_name_folder, i, seq, ksize=4, strand="both"):
     # we work on upper case letters
     seq = seq.upper()
     # raw word count
-    count_words, kword_count = cut_sequence_and_count(seq, ksize)
+    #count_words, kword_count = cut_sequence_and_count(seq, ksize)
+    ksize = pattern.count("1")
+    count_words, kword_count = cut_sequence_and_count_pattern(seq, pattern)
     # create feature vector
     freq_name = os.path.join(freq_name_folder, "frequencies_{}".format(i))
     with h5py.File(freq_name, "w") as hf:
@@ -672,6 +726,44 @@ def compute_frequency_h5py(freq_name_folder, i, seq, ksize=4, strand="both"):
         frequency[...] = count2freq(count_words, kword_count, ksize)[:]
         #print(frequency)
     
+    
+def compute_frequency_h5py_chunk(freq_name_folder, seqchunk, pattern, strand, start, stop):
+    """ function used in joblib to write in the h5py array frequency
+    
+    Parameters:
+    -----------
+    freq_name: string
+        path to the folder file holding h5py frequencies
+    i: int 
+        index of the sequence
+    seq: string
+        The nucleotide sequence
+    pattern: string
+        the binary space pattern to extract spaced-words example: 1001010001 
+        ksize is inferred from the number of '1' in the pattern
+    strand: string
+        which strand to used
+        
+    """
+    ksize = pattern.count("1")
+    size = stop-start
+    freqs = np.empty((size, 4**ksize), dtype="float32")
+    for i, seq in enumerate(seqchunk):
+        seq = select_strand(seq, strand)
+        # we work on upper case letters
+        seq = seq.upper()
+        # raw word count
+        #count_words, kword_count = cut_sequence_and_count(seq, ksize)
+        count_words, kword_count = cut_sequence_and_count_pattern(seq, pattern)
+        # create feature vector
+        freqs[i] = count2freq(count_words, kword_count, ksize)[:]
+    freq_name = os.path.join(freq_name_folder, "frequencies_{}_{}".format(start, stop))
+    #print(size, 4**ksize)
+    #print(freqs.shape)
+    with h5py.File(freq_name, "w") as hf:
+        frequency = hf.create_dataset("frequencies", (size, 4**ksize), dtype="float32")
+        frequency[...] = freqs[:]
+        #print(frequency)
     
 def frequency_pack(params):
     """ compute kmer frequency, ie feature vector of each read
@@ -696,15 +788,16 @@ def frequency_pack(params):
 
 #### Differents colors of parallelism for compute_frequencies
 
-def compute_frequencies_scoop(genome, ksize, strand, chunksize):
+def compute_frequencies_scoop(genome, pattern, strand, chunksize):
     """ compute frequencies
     
     Parameters:
     -----------
     genome: string
         path to the genome file
-    ksize: int
-        kmer size to use
+    pattern: string
+        the binary space pattern to extract spaced-words example: 1001010001 
+        ksize is inferred from the number of '1' in the pattern
     strand: string
         select genome strand ('both', 'plus', 'minus')
     chunksize: int
@@ -717,22 +810,23 @@ def compute_frequencies_scoop(genome, ksize, strand, chunksize):
     """
     #scoop.logger.info("Starting frequencies computation")
     frequencies = list()
-    for seqchunk in read_seq_chunk(genome, chunksize, ksize, strand):
+    for seqchunk in read_seq_chunk(genome, chunksize, pattern, strand):
         chunkfreq = futures.map(frequency_pack, seqchunk)
         frequencies.extend(chunkfreq)
                            
     frequencies = np.array(frequencies)
     return frequencies
 
-def compute_frequencies_pickle(genome, ksize, strand, chunksize, nbthread, workdir):
+def compute_frequencies_pickle(genome, pattern, strand, chunksize, nbthread, workdir):
     """ compute frequencies
     
     Parameters:
     -----------
     genome: string
         path to the genome file
-    ksize: int
-        kmer size to use
+    pattern: string
+        the binary space pattern to extract spaced-words example: 1001010001 
+        ksize is inferred from the number of '1' in the pattern
     strand: string
         select genome strand ('both', 'plus', 'minus')
     workdir: strng
@@ -748,7 +842,7 @@ def compute_frequencies_pickle(genome, ksize, strand, chunksize, nbthread, workd
     frequencies = list()
     pathin = tempfile.mktemp(dir=workdir)
     pathout = tempfile.mktemp(dir=workdir)
-    for seqchunk in read_seq_chunk(genome, chunksize, ksize, strand):
+    for seqchunk in read_seq_chunk(genome, chunksize, pattern, strand):
         with open(pathin, "wb") as outf:
             pickle.dump(seqchunk, outf)
         
@@ -769,15 +863,16 @@ def compute_frequencies_pickle(genome, ksize, strand, chunksize, nbthread, workd
 
     return frequencies
 
-def compute_frequencies_joblib(genome, ksize, strand, nbthread):
+def compute_frequencies_joblib(genome, pattern, strand, nbthread):
     """ compute frequencies
     
     Parameters:
     -----------
     genome: string
         path to the genome file
-    ksize: int
-        kmer size to use
+    pattern: string
+        the binary space pattern to extract spaced-words example: 1001010001 
+        ksize is inferred from the number of '1' in the pattern
     strand: string
         select genome strand ('both', 'plus', 'minus')
     workdir: strng
@@ -790,7 +885,7 @@ def compute_frequencies_joblib(genome, ksize, strand, nbthread):
     """
     fd = delayed(compute_frequency)
     frequencies = Parallel(n_jobs=nbthread, verbose=0)(
-        fd(str(record.seq), ksize, strand) for record in SeqIO.parse(genome, "fasta"))
+        fd(str(record.seq), pattern, strand) for record in SeqIO.parse(genome, "fasta"))
     
     #for ar in frequencies:
         #print(ar.shape)
@@ -800,15 +895,16 @@ def compute_frequencies_joblib(genome, ksize, strand, nbthread):
         frequencies.reshape(-1, 1)
     return frequencies
 
-def compute_frequencies_joblib_memmap(genome, ksize, strand, nbthread):
+def compute_frequencies_joblib_memmap(genome, pattern, strand, nbthread):
     """ compute frequencies
     
     Parameters:
     -----------
     genome: string
         path to the genome file
-    ksize: int
-        kmer size to use
+    pattern: string
+        the binary space pattern to extract spaced-words example: 1001010001 
+        ksize is inferred from the number of '1' in the pattern
     strand: string
         select genome strand ('both', 'plus', 'minus')
     workdir: strng
@@ -822,7 +918,7 @@ def compute_frequencies_joblib_memmap(genome, ksize, strand, nbthread):
     folder = tempfile.mkdtemp()
     freq_name = os.path.join(folder, 'frequencies')
     
-    
+    ksize = pattern.count("1")
     # Pre-allocate a writeable shared memory map as a container for the frequencies
     nb_record = get_nb_records(genome)
     frequencies = np.memmap(freq_name, dtype=np.float32, shape=(nb_record, 4**ksize), mode='w+')
@@ -833,7 +929,7 @@ def compute_frequencies_joblib_memmap(genome, ksize, strand, nbthread):
     #frequencies = load(freq_name, mmap_mode = "r+") 
     
     fd = delayed(compute_frequency_memmap)
-    Parallel(n_jobs=nbthread, verbose=0)(fd(frequencies, i, str(record.seq), ksize, strand) 
+    Parallel(n_jobs=nbthread, verbose=0)(fd(frequencies, i, str(record.seq), pattern, strand) 
                                          for i, record in enumerate(SeqIO.parse(genome, "fasta")))
     
     return frequencies, freq_name
@@ -846,23 +942,23 @@ def join_freq_results(folder, nb_record, ksize):
     with h5py.File(freq_name, "w") as outhf:
         frequencies = outhf.create_dataset("frequencies", (nb_record, 4**ksize), dtype="float32")
         for res in os.listdir(freq_folder):
-            idx = int(res.split("_")[1])
+            tmp = res.split("_")
+            start, stop = int(tmp[1]), int(tmp[2])
             with h5py.File(os.path.join(freq_folder, res), "r") as inhf:
                 freq = inhf.get("frequencies")
-                frequencies[idx] = freq.value[:]
+                frequencies[start: stop] = freq.value[:]
     return freq_name
-    
 
-
-def compute_frequencies_joblib_h5py(genome, ksize, strand, nbthread):
+def compute_frequencies_joblib_h5py(genome, pattern, strand, nbthread):
     """ compute frequencies
     
     Parameters:
     -----------
     genome: string
         path to the genome file
-    ksize: int
-        kmer size to use
+    pattern: string
+        the binary space pattern to extract spaced-words example: 1001010001 
+        ksize is inferred from the number of '1' in the pattern
     strand: string
         select genome strand ('both', 'plus', 'minus')
     workdir: strng
@@ -881,37 +977,40 @@ def compute_frequencies_joblib_h5py(genome, ksize, strand, nbthread):
     # Pre-allocate a writeable shared memory map as a container for the frequencies
     nb_record = sum(1 for record in SeqIO.parse(genome, "fasta"))
     
-    #with h5py.File(freq_name, "w") as hf:
-        #frequencies = hf.create_dataset("frequencies", (nb_record, 4**ksize), dtype="float32")
     
-    fd = delayed(compute_frequency_h5py)
-    Parallel(n_jobs=nbthread, verbose=0)(fd(freq_name_folder, i, str(record.seq), ksize, strand) 
-                                         for i, record in enumerate(SeqIO.parse(genome, "fasta")))
-    #for i, record in enumerate(SeqIO.parse(genome, "fasta")):
-        #compute_frequency_h5py(freq_name_folder, i, str(record.seq), ksize, strand)
+    chunksize = nb_record // (nbthread*SCALING) # some scaling value
+    if nb_record % (nbthread*SCALING) != 0:
+        chunksize += 1
+        
+    fd = delayed(compute_frequency_h5py_chunk)
+    Parallel(n_jobs=nbthread, verbose=0)(fd(freq_name_folder, seqchunk, pattern, strand, start, stop)
+                                         for start, stop, seqchunk in read_seq_chunk_pos(genome, chunksize))
+                                         #str(record.seq), pattern, strand) 
+                                         #for i, record in enumerate(SeqIO.parse(genome, "fasta")))
     
     # now join the results
+    ksize = pattern.count("1")
     freq_name = join_freq_results(folder, nb_record, ksize)
     #print(folder)
     return None, freq_name
 
 
-def compute_frequencies(mthdrun, large, genome, k, strand, 
+def compute_frequencies(mthdrun, large, genome, pattern, strand, 
                         distchunksize, threads_max, workdir):
     """ choose which function to call to compute frequencies
     """
     freq_name = None
     if mthdrun == "scoop1":
-        frequencies = compute_frequencies_scoop(genome, k, strand, distchunksize)
+        frequencies = compute_frequencies_scoop(genome, pattern, strand, distchunksize)
     elif mthdrun == "scoop2":
-        frequencies = compute_frequencies_pickle(genome, k, strand, distchunksize, threads_max, workdir)
+        frequencies = compute_frequencies_pickle(genome, pattern, strand, distchunksize, threads_max, workdir)
     elif mthdrun == "joblib":
         if large == "memmap":
-            frequencies, freq_name = compute_frequencies_joblib_memmap(genome, k, strand, threads_max)
+            frequencies, freq_name = compute_frequencies_joblib_memmap(genome, pattern, strand, threads_max)
         elif large == "h5py":
-            frequencies, freq_name = compute_frequencies_joblib_h5py(genome, k, strand, threads_max)
+            frequencies, freq_name = compute_frequencies_joblib_h5py(genome, pattern, strand, threads_max)
         else:
-            frequencies = compute_frequencies_joblib(genome, k, strand, threads_max) 
+            frequencies = compute_frequencies_joblib(genome, pattern, strand, threads_max) 
     else:
         print("Method {} is unknown".format(mthdrun), file=sys.stderr)
             
@@ -924,8 +1023,10 @@ def get_cmd():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--assembly", action="store", required=True, dest="genome", 
                         help="multifasta of the genome assembly")
-    parser.add_argument("-k", "--lgMot", action="store", dest="k", type=int, default=4, 
+    parser.add_argument("-k", "--lgMot", action="store", dest="k", type=int,
                         help="word lenght / kmer length / k [default:%(default)d]")
+    #parser.add_argument("-k", "--lgMot", action="store", dest="k", default="1111", 
+                        #help="word lenght / kmer length / k [default:%(default)d]")
     parser.add_argument("-s", "--strand", action="store", dest="strand", default="both", choices=["both", "plus", "minus"],
                         help="strand used to compute microcomposition. [default:%(default)s]")
     parser.add_argument("-d", "--distance", action="store", dest="dist", default="Eucl", choices=["Eucl", "JSD"], 
@@ -952,6 +1053,13 @@ def get_cmd():
 
 def main():
     params = get_cmd()
+    
+    # quick hack to turn the k-mer parameter into a pattern (whithout joker)
+    # TODO to be removed
+    if params.k == int and not params.pattern:
+        params.k = "1" * params.k
+    elif not params.k and params.pattern:
+        params.k = params.pattern[:]
     
     # compute word frequency of each sequence
     print("Computing frequencies")
