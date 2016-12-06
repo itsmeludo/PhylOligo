@@ -1056,10 +1056,12 @@ def main():
     
     # quick hack to turn the k-mer parameter into a pattern (whithout joker)
     # TODO to be removed
-    if params.k == int and not params.pattern:
+    if type(params.k) == int and not params.pattern:
         params.k = "1" * params.k
     elif not params.k and params.pattern:
         params.k = params.pattern[:]
+    
+    print("Using pattern {}".format(params.k))
     
     # compute word frequency of each sequence
     print("Computing frequencies")
