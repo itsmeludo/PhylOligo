@@ -286,6 +286,8 @@ tree_building_method = ifelse(is.null(opt[["tree_building_method"]]), tree_build
 min_perc = ifelse(is.null(opt[["min_perc"]]), min_perc <- 0.5 , min_perc <-opt[["min_perc"]])
 max_perc = ifelse(is.null(opt[["max_perc"]]), max_perc <- 30 , max_perc <-opt[["max_perc"]])
 branchwidth = ifelse(is.null(opt[["branchwidth"]]), branchwidth <- 40 , branchwidth <-opt[["branchwidth"]])
+distance_clip_percentile = ifelse(is.null(opt[["distance_clip_percentile"]]), distance_clip_percentile <- 1 , distance_clip_percentile <-opt[["distance_clip_percentile"]])
+contig_min_size = ifelse(is.null(opt[["contig_min_size"]]), contig_min_size <- 0 , contig_min_size <-opt[["contig_min_size"]])
 
 if ( system("which infoseq",intern=TRUE) == ""){
   print("Please Install EMBOSS")
@@ -325,21 +327,21 @@ names(lengths)<-labels
 
 
 
-if (opt[["distance_clip_percentile"]]){
+if (distance_clip_percentile != 1){
     if (opt[["verbose"]]) print(paste(date(), "Clipping matrix outlyers"))
     medians=apply(dist_matrix,1,median)
-    indexes=which(medians<=quantile(medians,probs=opt[["distance_clip_percentile"]]))
+    indexes=which(medians<=quantile(medians,probs=distance_clip_percentile))
     dist_matrix = dist_matrix[indexes,indexes]
     labels = labels[indexes]
     lengths = lengths[indexes]
 }
 
 
-if (opt[["contig_min_size"]]){
-    if (opt[["verbose"]]) print(paste(date(), "Clipping matrix from contigs shorter than ",opt[["contig_min_size"]]," bp"))
+if (contig_min_size !=0){
+    if (opt[["verbose"]]) print(paste(date(), "Clipping matrix from contigs shorter than ",contig_min_size," bp"))
 #     medians=apply(dist_matrix,1,mean)
 #     lengths = lengths[indexes]
-    indexes=which(lengths>=opt[["contig_min_size"]])
+    indexes=which(lengths>=contig_min_size)
     dist_matrix = dist_matrix[indexes,indexes]
     labels = labels[indexes]
     lengths = lengths[indexes]

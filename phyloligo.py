@@ -1023,7 +1023,7 @@ def get_cmd():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--assembly", action="store", required=True, dest="genome", 
                         help="multifasta of the genome assembly")
-    parser.add_argument("-k", "--lgMot", action="store", dest="k", type=int,
+    parser.add_argument("-k", "--lgMot", action="store", dest="k", type=int,default=4,
                         help="word lenght / kmer length / k [default:%(default)d]")
     #parser.add_argument("-k", "--lgMot", action="store", dest="k", default="1111", 
                         #help="word lenght / kmer length / k [default:%(default)d]")

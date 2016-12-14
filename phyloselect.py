@@ -262,7 +262,7 @@ def main():
     
     # get matrix and transform the data to a bidimensional set of point with tsne
     print("Read matrix")
-    if params.large != []:
+    if params.large != False:
         if params.large == "memmap":
             # if matrix was created using --large option read it as a memmap matrix
             matrix = np.memmap(params.distmat, dtype=np.float32, mode="r")
