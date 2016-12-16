@@ -107,6 +107,7 @@ def read_seq_chunk(genome, chunksize, pattern, strand):
         a list of SeqRecord 
     """
     seqchunk = list()
+    pattern=str(pattern)
     for record in SeqIO.parse(genome, "fasta"):
         seqchunk.append((str(record.seq), pattern, strand))
         if len(seqchunk) == chunksize:
@@ -517,9 +518,11 @@ def compute_distances(mthdrun, large, frequencies, freq_name, out_file, dist, th
     """
     if mthdrun == "joblib":
         if large == "memmap":
-            res = compute_distances_memmap(frequencies, freq_name, out_file, metric=dist, n_jobs=threads_max)
+            #res = compute_distances_memmap(frequencies, freq_name, out_file, metric=dist, n_jobs=threads_max)
+            compute_distances_memmap(frequencies, freq_name, out_file, metric=dist, n_jobs=threads_max)  # LM : I remove assignation as we don't need to store it it seems as we pass the out file name and the lib shoiuld handle the writing.
         if large == "h5py":
-            res = compute_distances_h5py(freq_name, out_file, metric=dist, n_jobs=threads_max)
+            #res = compute_distances_h5py(freq_name, out_file, metric=dist, n_jobs=threads_max)
+            compute_distances_h5py(freq_name, out_file, metric=dist, n_jobs=threads_max) # LM : I remove assignation as we don't need to store it it seems as we pass the out file name and the lib shoiuld handle the writing.
         else:
             res = compute_distances_joblib(frequencies, freqchunksize, metric=dist, n_jobs=threads_max)
     elif mthdrun == "scoop1":
@@ -596,6 +599,7 @@ def cut_sequence_and_count_pattern(seq, pattern):
     """
     seq_words = list()
     #ksize=pattern.count('1')
+    pattern=str(pattern)
     target_index = [i  for i,j in enumerate(pattern) if j=="1"]
 
     # re.split: excludes what is not a known characterised nucleotide 
@@ -660,6 +664,7 @@ def compute_frequency(seq, pattern="1111", strand="both"):
     seq = seq.upper()
     # raw word count
     #count_words, kword_count = cut_sequence_and_count(seq, ksize)
+    pattern=str(pattern)
     ksize = pattern.count("1")
     count_words, kword_count = cut_sequence_and_count_pattern(seq, pattern)
     # create feature vector
@@ -689,6 +694,7 @@ def compute_frequency_memmap(frequency, i, seq, pattern="1111", strand="both"):
     seq = seq.upper()
     # raw word count
     #count_words, kword_count = cut_sequence_and_count(seq, ksize)
+    pattern=str(pattern)
     ksize = pattern.count("1")
     count_words, kword_count = cut_sequence_and_count_pattern(seq, pattern)
     # create feature vector
@@ -717,6 +723,7 @@ def compute_frequency_h5py(freq_name_folder, i, seq, pattern="1111", strand="bot
     seq = seq.upper()
     # raw word count
     #count_words, kword_count = cut_sequence_and_count(seq, ksize)
+    pattern=str(pattern)
     ksize = pattern.count("1")
     count_words, kword_count = cut_sequence_and_count_pattern(seq, pattern)
     # create feature vector
@@ -745,6 +752,7 @@ def compute_frequency_h5py_chunk(freq_name_folder, seqchunk, pattern, strand, st
         which strand to used
         
     """
+    pattern=str(pattern)
     ksize = pattern.count("1")
     size = stop-start
     freqs = np.empty((size, 4**ksize), dtype="float32")
@@ -917,7 +925,7 @@ def compute_frequencies_joblib_memmap(genome, pattern, strand, nbthread):
     """
     folder = tempfile.mkdtemp()
     freq_name = os.path.join(folder, 'frequencies')
-    
+    pattern=str(pattern)
     ksize = pattern.count("1")
     # Pre-allocate a writeable shared memory map as a container for the frequencies
     nb_record = get_nb_records(genome)
@@ -989,6 +997,7 @@ def compute_frequencies_joblib_h5py(genome, pattern, strand, nbthread):
                                          #for i, record in enumerate(SeqIO.parse(genome, "fasta")))
     
     # now join the results
+    pattern=str(pattern)
     ksize = pattern.count("1")
     freq_name = join_freq_results(folder, nb_record, ksize)
     #print(folder)
@@ -1023,7 +1032,7 @@ def get_cmd():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--assembly", action="store", required=True, dest="genome", 
                         help="multifasta of the genome assembly")
-    parser.add_argument("-k", "--lgMot", action="store", dest="k", type=int,default=4,
+    parser.add_argument("-k", "--lgMot", action="store", dest="pattern",
                         help="word lenght / kmer length / k [default:%(default)d]")
     #parser.add_argument("-k", "--lgMot", action="store", dest="k", default="1111", 
                         #help="word lenght / kmer length / k [default:%(default)d]")
@@ -1041,8 +1050,8 @@ def get_cmd():
                         help="how many threads to use for windows microcomposition computation[default:%(default)d]")
     parser.add_argument("-o", "--out", action="store", dest="out_file", default="phyloligo.out", 
                         help="output file[default:%(default)s]")
-    parser.add_argument("-w", "--workdir", action="store", dest="workdir", help="working directory", required=True)
-    parser.add_argument("-p", "--pattern", action="store", dest="pattern", help="spaced-word pattern string, only containing 1s and 0s, i.e. '100101001', no default")
+    parser.add_argument("-w", "--workdir", action="store", dest="workdir", default=".", help="working directory")
+    parser.add_argument("-p", "--pattern", action="store", dest="pattern", default="1111", help="spaced-word pattern string, only containing 1s and 0s, i.e. '100101001', default='1111'")
     
     
     params = parser.parse_args()
@@ -1056,17 +1065,18 @@ def main():
     
     # quick hack to turn the k-mer parameter into a pattern (whithout joker)
     # TODO to be removed
-    if type(params.k) == int and not params.pattern:
-        params.k = "1" * params.k
-    elif not params.k and params.pattern:
-        params.k = params.pattern[:]
+    if type(params.pattern) == int:
+        params.pattern = str("1") * params.k
+    #elif not params.k and params.pattern:
+        #params.k = params.pattern[:]
+        #param.pattern=str(params.pattern)
     
-    print("Using pattern {}".format(params.k))
+    print("Using pattern {}".format(params.pattern))
     
     # compute word frequency of each sequence
     print("Computing frequencies")
     frequencies, freq_name = compute_frequencies(params.mthdrun, params.large,
-                                            params.genome, params.k, params.strand, 
+                                            params.genome, params.pattern, params.strand, 
                                             params.distchunksize, params.threads_max, params.workdir)
         
     # compute pairwise distances
