@@ -242,12 +242,12 @@ def JSD_h5py(output_dir, input, s):
     with h5py.File(input, "r") as hf:
         X = hf.get("frequencies")
         X, Y = check_pairwise_arrays(X, X[s])
-        d = JSD(X, Y)
+        dist = JSD(X, Y)
     
     output = os.path.join(output_dir, "distance_{}_{}".format(s.start, s.stop))
     with h5py.File(output, "w") as hf:
         distances = hf.create_dataset("distances", dist.shape, dtype="float32")
-        distances[...] = d[:]
+        distances[...] = dist[:]
     #hf = h5py.File(output, "r+")
     #distances = hf.get("distances")
     #distances[s] = d
@@ -516,6 +516,7 @@ def compute_distances_h5py(freq_name, dist_name, metric="Eucl", n_jobs=1):
 def compute_distances(mthdrun, large, frequencies, freq_name, out_file, dist, threads_max, freqchunksize, workdir):
     """ choose which function to call to compute distances
     """
+    res=None
     if mthdrun == "joblib":
         if large == "memmap":
             #res = compute_distances_memmap(frequencies, freq_name, out_file, metric=dist, n_jobs=threads_max)
