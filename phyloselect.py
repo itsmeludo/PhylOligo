@@ -223,7 +223,7 @@ def write_fastafile(labels_pred, fastafile, outputdir):
     all_classes = np.unique(labels_pred)
     for cl in all_classes:
         if cl == -1:
-            pathout = os.path.join(outputdir, "data_fasta_noclass.fa")
+            pathout = /
             indexes = np.where(labels_pred == cl)[0]
             records = get_fasta_record(set(list(indexes)), fastafile)
             with open(pathout, "w") as outf:
@@ -296,7 +296,7 @@ def main():
             curtime = time.strftime("%H%M%S")
             pathout = tempfile.mktemp(
                 prefix="phyloselect_init_{}_{}".format(date, curtime), 
-                suffix=".pdf", dir="/tmp/")
+                suffix=".pdf", dir=params.outputdir)
             #pathout = tempfile.mktemp(suffix=".pdf", prefix="initial_clustering_", dir="/tmp/")
             print("Saving dimensionallity reduction to {}".format(pathout))
             plt.savefig(pathout)
@@ -324,7 +324,7 @@ def main():
             labels_pred = clusterize(matrix, method, 
                                      min_cluster_size=min_cl_size, min_samples=min_samples, nbk=nbk)
             show_labels(data, labels_pred, method, params.noX, prefix="clustering_{}".format(cnt), 
-                        dirout="/tmp/", verbose=1)
+                        dirout=params.outputdir, verbose=1)
             cnt += 1
             print("perform an other run? [y/n]")
             msg = input("--> ")

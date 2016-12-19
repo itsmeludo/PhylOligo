@@ -288,6 +288,8 @@ max_perc = ifelse(is.null(opt[["max_perc"]]), max_perc <- 30 , max_perc <-opt[["
 branchwidth = ifelse(is.null(opt[["branchwidth"]]), branchwidth <- 40 , branchwidth <-opt[["branchwidth"]])
 distance_clip_percentile = ifelse(is.null(opt[["distance_clip_percentile"]]), distance_clip_percentile <- 1 , distance_clip_percentile <-opt[["distance_clip_percentile"]])
 contig_min_size = ifelse(is.null(opt[["contig_min_size"]]), contig_min_size <- 0 , contig_min_size <-opt[["contig_min_size"]])
+matrix_heatmap = ifelse(is.null(opt[["matrix_heatmap"]]), matrix_heatmap <- 0 , matrix_heatmap <-opt[["matrix_heatmap"]])
+
 
 if ( system("which infoseq",intern=TRUE) == ""){
   print("Please Install EMBOSS")
@@ -350,7 +352,7 @@ if (contig_min_size !=0){
 
 
 
-if (opt[["matrix_heatmap"]]){
+if (matrix_heatmap){
     if (opt[["verbose"]]) print(paste(date(), "write matrix heatmap"))
     pdf(file=paste(outfile,"_distance_matrix_heatmap.pdf",sep=""),width=24, height=24)
 #     layout(matrix(c(1,2),1,2), widths=c(4,1), heights=c(1,1))
