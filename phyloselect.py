@@ -16,12 +16,11 @@ import h5py
 import sklearn.cluster as cluster
 from sklearn.manifold import TSNE
 
-import seaborn as sns
+#import seaborn as sns
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
 
-sns.set_context('poster')
-sns.set_color_codes()
+#sns.set_context('poster')
+#sns.set_color_codes()
 plot_kwds = {'alpha' : 0.3, 's' : 30, 'linewidths':0}
 
 
@@ -49,7 +48,7 @@ def get_cmd():
     parser.add_argument("--large", action="store", choices=["memmap", "h5py"], dest="large", help="used in combination with "
                         "joblib for large dataset", default=False)
     parser.add_argument("--noX", action="store_true", dest="noX", help="instead of showing pictures, "
-                        "store them in pdf")
+                        "store them in png")
     parser.add_argument("-o", action="store", dest="outputdir", required=True)
     params = parser.parse_args()
     
@@ -147,7 +146,7 @@ def plot_labels(data, labels, algorithm, output):
     plt.savefig(output, dpi=300)
     plt.close()
 
-def show_labels(data, labels, algorithm, noX, prefix="", dirout="/tmp/", verbose=0):
+def show_labels(data, labels, algorithm, noX, prefix="", dirout=None, verbose=0):
     """ display resulting labels
     
     Parameters:
@@ -172,9 +171,14 @@ def show_labels(data, labels, algorithm, noX, prefix="", dirout="/tmp/", verbose
     if noX:
         date = time.strftime("%Y%m%d")
         curtime = time.strftime("%H%M%S")
-        pathout = tempfile.mktemp(
-            prefix="phyloselect_{}_{}_{}_".format(date, curtime, prefix), 
-            suffix=".pdf", dir=dirout)
+        if dirout != None:
+            pathout = tempfile.mktemp(
+                prefix="phyloselect_{}_{}_{}_".format(date, curtime, prefix), 
+                suffix=".png", dir=dirout)
+        else:
+            pathout = tempfile.mktemp(
+                prefix="phyloselect_{}_{}_{}_".format(date, curtime, prefix), 
+                suffix=".png")
         if verbose :
             print("saving file at {}".format(pathout))
         plt.savefig(pathout)
@@ -296,8 +300,7 @@ def main():
             curtime = time.strftime("%H%M%S")
             pathout = tempfile.mktemp(
                 prefix="phyloselect_init_{}_{}".format(date, curtime), 
-                suffix=".pdf", dir=params.outputdir)
-            #pathout = tempfile.mktemp(suffix=".pdf", prefix="initial_clustering_", dir="/tmp/")
+                suffix=".png", dir=params.outputdir)
             print("Saving dimensionallity reduction to {}".format(pathout))
             plt.savefig(pathout)
         else:
@@ -309,7 +312,7 @@ def main():
     
     # plot the different classes if reduction of dimentionality
     if params.performtsne and not params.interactive:
-        pathout = os.path.join(params.outputdir, "data_tsne_reduc.pdf")
+        pathout = os.path.join(params.outputdir, "data_tsne_reduc.png")
         print("Save tsne clustering projection in {}".format(pathout))
         plot_labels(data, labels_pred, params.method, pathout)
     elif params.interactive:
