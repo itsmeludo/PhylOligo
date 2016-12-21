@@ -482,7 +482,7 @@ def compute_distances_h5py(freq_name, dist_name, metric="Eucl", n_jobs=1):
         (n_samples, n_samples) distance matrix
     """
     #scoop.logger.info("Starting distance computation")
-    #folder = tempfile.mkdtemp()
+    #folder = tempfile.f()
     #dist_name = os.path.join(folder, output)
     
     folder = os.path.dirname(freq_name)
@@ -1033,7 +1033,7 @@ def get_cmd():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--assembly", action="store", required=True, dest="genome", 
                         help="multifasta of the genome assembly")
-    parser.add_argument("-k", "--lgMot", action="store", dest="pattern",
+    parser.add_argument("-k", "--lgMot", action="store", dest="pattern", default=4,
                         help="word lenght / kmer length / k [default:%(default)d]")
     #parser.add_argument("-k", "--lgMot", action="store", dest="k", default="1111", 
                         #help="word lenght / kmer length / k [default:%(default)d]")
