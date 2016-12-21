@@ -1074,6 +1074,9 @@ def main():
     
     print("Using pattern {}".format(params.pattern))
     
+    if not os.path.isdir(params.workdir):
+        os.makedirs(params.workdir)
+    
     # compute word frequency of each sequence
     print("Computing frequencies")
     frequencies, freq_name = compute_frequencies(params.mthdrun, params.large,
