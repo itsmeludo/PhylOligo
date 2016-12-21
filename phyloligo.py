@@ -904,7 +904,7 @@ def compute_frequencies_joblib(genome, pattern, strand, nbthread):
         frequencies.reshape(-1, 1)
     return frequencies
 
-def compute_frequencies_joblib_memmap(genome, pattern, strand, nbthread):
+def compute_frequencies_joblib_memmap(genome, pattern, strand, nbthread, workdir):
     """ compute frequencies
     
     Parameters:
@@ -924,7 +924,7 @@ def compute_frequencies_joblib_memmap(genome, pattern, strand, nbthread):
     frequencies: numpy.array
         the samples x features matrix storing NT composition of fasta sequences
     """
-    folder = tempfile.mkdtemp()
+    folder = tempfile.mkdtemp(dir=workdir)
     freq_name = os.path.join(folder, 'frequencies')
     pattern=str(pattern)
     ksize = pattern.count("1")
@@ -958,7 +958,7 @@ def join_freq_results(folder, nb_record, ksize):
                 frequencies[start: stop] = freq.value[:]
     return freq_name
 
-def compute_frequencies_joblib_h5py(genome, pattern, strand, nbthread):
+def compute_frequencies_joblib_h5py(genome, pattern, strand, nbthread, workdir):
     """ compute frequencies
     
     Parameters:
@@ -978,7 +978,7 @@ def compute_frequencies_joblib_h5py(genome, pattern, strand, nbthread):
     frequencies: numpy.array
         the samples x features matrix storing NT composition of fasta sequences
     """
-    folder = tempfile.mkdtemp()
+    folder = tempfile.mkdtemp(dir=workdir)
     freq_name_folder = os.path.join(folder, 'frequencies')
     if not os.path.isdir(freq_name_folder):
         os.makedirs(freq_name_folder)
@@ -1016,9 +1016,9 @@ def compute_frequencies(mthdrun, large, genome, pattern, strand,
         frequencies = compute_frequencies_pickle(genome, pattern, strand, distchunksize, threads_max, workdir)
     elif mthdrun == "joblib":
         if large == "memmap":
-            frequencies, freq_name = compute_frequencies_joblib_memmap(genome, pattern, strand, threads_max)
+            frequencies, freq_name = compute_frequencies_joblib_memmap(genome, pattern, strand, threads_max, workdir)
         elif large == "h5py":
-            frequencies, freq_name = compute_frequencies_joblib_h5py(genome, pattern, strand, threads_max)
+            frequencies, freq_name = compute_frequencies_joblib_h5py(genome, pattern, strand, threads_max, workdir)
         else:
             frequencies = compute_frequencies_joblib(genome, pattern, strand, threads_max) 
     else:
