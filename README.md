@@ -210,7 +210,7 @@ phyloligo_comparemat.py --mat1 data/references/M.oryzae_TH12_JSD_ref.mat --forma
 ```
 * using scoop 
 ```Bash
-python -m scoop -n 8 phyloligo.py -i data/M.oryzae_TH12.fasta --method scoop -p 1111 -s both -d JSD -c 8 -w data/example4/ -o data/example4/M.oryzae_TH12_ex4_JSD_scoop.mat
+python -m scoop -n 8 phyloligo.py -i data/M.oryzae_TH12.fasta --method scoop -p 1111 -s both -d JSD -w data/example4/ -o data/example4/M.oryzae_TH12_ex4_JSD_scoop.mat
 phyloligo_comparemat.py --mat1 data/references/M.oryzae_TH12_JSD_ref.mat --format1 numpy --mat2 data/example4/M.oryzae_TH12_ex4_JSD_scoop.mat --format2 numpy
 ```
 

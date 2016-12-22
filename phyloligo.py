@@ -192,6 +192,15 @@ def JSD(a, b):
     if a.ndim == 1 and b.ndim == 1:
         h = 0.5 * (a + b)
         d = 0.5 * (KL(a, h) + KL(b, h))
+    elif a.ndim==2 and b.ndim == 1:
+        h = 0.5 * (a[np.newaxis,:] + b)
+        d1 = a[np.newaxis,:] * np.log(a[np.newaxis,:]/h)
+        posdef_check_value(d1)
+        d1 = np.sum(d1, axis=2)
+        d2 = b * np.log(b/h)
+        posdef_check_value(d2)
+        d2 = np.sum(d2, axis=2)
+        d = 0.5 * (d1 + d2)
     else:
         h = 0.5 * (a[np.newaxis,:] + b[:, np.newaxis])
         d1 = a[np.newaxis,:] * np.log(a[np.newaxis,:]/h)
@@ -750,52 +759,6 @@ def compute_frequencies_scoop(genome, pattern, strand, chunksize):
         frequencies.extend(chunkfreq)
                            
     frequencies = np.array(frequencies)
-    return frequencies
-
-def compute_frequencies_pickle(genome, pattern, strand, chunksize, nbthread, workdir):
-    """ compute frequencies
-    
-    Parameters:
-    -----------
-    genome: string
-        path to the genome file
-    pattern: string
-        the binary space pattern to extract spaced-words example: 1001010001 
-        ksize is inferred from the number of '1' in the pattern
-    strand: string
-        select genome strand ('both', 'plus', 'minus')
-    workdir: strng
-        temporary working directory to store pickled chunk
-        
-    Return:
-    -------
-    frequencies: numpy.array
-        the samples x features matrix storing NT composition of fasta sequences
-    """
-    #scoop.logger.info("Starting frequencies computation")
-    # compute frequencies # TODO parallelization of frequencies computation
-    frequencies = list()
-    pathin = tempfile.mktemp(dir=workdir)
-    pathout = tempfile.mktemp(dir=workdir)
-    for seqchunk in read_seq_chunk(genome, chunksize, pattern, strand):
-        with open(pathin, "wb") as outf:
-            pickle.dump(seqchunk, outf)
-        
-        cmd = "python3 -m scoop -n {} phylo_batchfreq.py {} {}".format(nbthread, pathin, pathout)
-        cmd = shlex.split(cmd)
-        try:
-            ret = subprocess.check_call(cmd)
-        except:
-            print("Error running phylo_batchfreq.py on {} {}".format(pathin, pathout))
-            sys.exit(1)
-        with open(pathout, "rb") as inf:
-            chunkfreq = pickle.load(inf)
-        frequencies.extend(chunkfreq)
-
-    os.remove(pathin)
-    os.remove(pathout)
-    frequencies = np.array(frequencies)
-
     return frequencies
 
 def compute_frequencies_joblib(genome, pattern, strand, nbthread):

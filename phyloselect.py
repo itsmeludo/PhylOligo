@@ -16,11 +16,8 @@ import h5py
 import sklearn.cluster as cluster
 from sklearn.manifold import TSNE
 
-#import seaborn as sns
 import matplotlib.pyplot as plt
 
-#sns.set_context('poster')
-#sns.set_color_codes()
 plot_kwds = {'alpha' : 0.3, 's' : 30, 'linewidths':0}
 
 
@@ -135,7 +132,8 @@ def plot_labels(data, labels, algorithm, output):
     output: string
         where to save the output plot
     """
-    palette = sns.color_palette('deep', np.unique(labels).max() + 1)
+    #palette = sns.color_palette('deep', np.unique(labels).max() + 1)
+    palette = plt.get_cmap("viridis")
     colors = [palette[x] if x >= 0 else (0.0, 0.0, 0.0) for x in labels]
     fig, ax = plt.subplots()
     ax.scatter(data.T[0], data.T[1], c=colors, **plot_kwds)
@@ -160,7 +158,8 @@ def show_labels(data, labels, algorithm, noX, prefix="", dirout=None, verbose=0)
     output: string
         where to save the output plot
     """
-    palette = sns.color_palette('deep', np.unique(labels).max() + 1)
+    #palette = sns.color_palette('deep', np.unique(labels).max() + 1)
+    palette = plt.get_cmap("viridis")
     colors = [palette[x] if x >= 0 else (0.0, 0.0, 0.0) for x in labels]
     fig, ax = plt.subplots()
     ax.scatter(data.T[0], data.T[1], c=colors, **plot_kwds)
