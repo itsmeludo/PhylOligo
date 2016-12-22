@@ -94,28 +94,71 @@ Parameters:
 Install
 -------
 
-Easy mode:
+PhyloOligo softwares need python 3.4 or newer and several R and python packages.
+
+If python or R are not install used on your system:
+```Bash
+apt-get install python3-dev python3-setuptools r-base
+```
+
+* Clone/download the git repository.
 
 ```Bash
-#Ubuntu/Debian-based
-apt-get install python3-dev python3-setuptools r-base emboss samtools git
-easy_install3 -U setuptools
+git clone https://github.com/itsmeludo/PhylOligo.git
+```
+or download it from https://github.com/itsmeludo/PhylOligo
+
+* Install python scripts and dependencies
+
+If you have administrator rights or if you are working in a python virtual environment:
+
+```Bash
 git clone https://github.com/itsmeludo/PhylOligo.git
 cd PhylOligo
 pip3 install .
 ```
 
+You can also install it locally using:
 
-Exhaustive procedure:
+```Bash
+git clone https://github.com/itsmeludo/PhylOligo.git
+cd PhylOligo
+pip3 install . --user
+```
 
-* Dependencies:
+In the last case, be sure to add the local directory with executable in your executable path.
+On linux:
+
+```Bash
+export PATH=$HOME/.local/bin:$PATH
+```
+
+* Install R scripts and dependencies
+
+In R, as root or user
+```R
+install.packages(c("ape","getopt","gplots"))
+```
+
+Link the programs into a directory listed in your $PATH
+```Bash
+ln -s "`pwd`/phyloselect.R" <a directory in your $PATH variable>
+```
+
+* EMBOSS / Samtools 
+
+```Bash
+apt-get install emboss samtools
+```
+
+* List of Dependencies:
+
     * Python 3.x
         * [BioPython](biopython.org)
         * [sklearn](http://scikit-learn.org/stable/install.html)
         * [Numpy](numpy.org)
         * [matplotlib](http://matplotlib.org)
         * [hdbscan](https://pypi.python.org/pypi/hdbscan)
-        * [seaborn] (http://seaborn.pydata.org)
         * [Cython](http://cython.org)
         * [h5py](http://www.h5py.org)
     * R 3.x
@@ -129,42 +172,8 @@ Exhaustive procedure:
     
 * Install python3, the latest R version, EMBOSS and Samtools [according to your system](https://xkcd.com/1654/) 
 
-* In the Bash/Shell, as root/admin if wanted installed globally.
-```Bash
-#Ubuntu/Debian-based
-apt-get install python3-dev python3-setuptools r-base emboss samtools
-easy_install3 -U setuptools
-pip3 install biopython 
-pip3 install sklearn
-pip3 install cython
-pip3 install numpy
-pip3 install matplotlib
-pip3 install seaborn
-pip3 install h5py 
-pip3 install hdbscan 
-pip3 install kmedoids 
-```
-
-
+If you want to install the dependencies separately use:
 ```Bash
 pip3 install -r requirements.txt
 ```
 
-
-* In R, as root or user
-```R
-install.packages(c("ape","getopt","gplots"))
-```
-
-* Clone the repo
-```Bash
-git clone https://github.com/itsmeludo/PhylOligo.git
-```
-or download it from https://github.com/itsmeludo/PhylOligo
-
-
-* Link the programs into a directory listed in your $PATH
-```Bash
-cd PhylOligo
-export PATH="$PATH:`pwd`"
-```
