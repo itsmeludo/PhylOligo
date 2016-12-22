@@ -177,3 +177,49 @@ If you want to install the dependencies separately use:
 pip3 install -r requirements.txt
 ```
 
+Test and examples
+-----------------
+
+Pipeline example with the M. oryzae fasta file in the data folder.
+
+
+First example:
+* kmer = 4
+* Jensen-Shannon divergence (JSD)
+* parallelization with joblib using 8 cpu
+
+```Bash
+phyloligo.py -i data/M.oryzae_TH12.fasta --method joblib -p 1111 -s both -d JSD -c 8 -w data/example1/ -o data/example1/M.oryzae_TH12_ex1_JSD_joblib.mat
+```
+
+Compare the result matrix with the reference matrix
+```Bash
+phyloligo_comparemat.py --mat1 data/references/M.oryzae_TH12_JSD_ref.mat --format1 numpy --mat2 data/example1/M.oryzae_TH12_ex1_JSD_joblib.mat --format2 numpy
+```
+
+Other method can be used to compute the distance matrix:
+* for large dataset
+```Bash
+phyloligo.py -i data/M.oryzae_TH12.fasta --method joblib -p 1111 -s both -d JSD -c 8 -w data/example2/ -o data/example2/M.oryzae_TH12_ex2_JSD_joblib_h5py.mat --large h5py
+phyloligo_comparemat.py --mat1 data/references/M.oryzae_TH12_JSD_ref.mat --format1 numpy --mat2 data/example2/M.oryzae_TH12_ex2_JSD_joblib_h5py.mat --format2 h5py
+```
+or
+```Bash
+phyloligo.py -i data/M.oryzae_TH12.fasta --method joblib -p 1111 -s both -d JSD -c 8 -w data/example3/ -o data/example3/M.oryzae_TH12_ex3_JSD_joblib_memmap.mat --large memmap
+phyloligo_comparemat.py --mat1 data/references/M.oryzae_TH12_JSD_ref.mat --format1 numpy --mat2 data/example3/M.oryzae_TH12_ex3_JSD_joblib_memmap.mat --format2 memmap
+```
+* using scoop 
+```Bash
+python -m scoop -n 8 phyloligo.py -i data/M.oryzae_TH12.fasta --method scoop -p 1111 -s both -d JSD -c 8 -w data/example4/ -o data/example4/M.oryzae_TH12_ex4_JSD_scoop.mat
+phyloligo_comparemat.py --mat1 data/references/M.oryzae_TH12_JSD_ref.mat --format1 numpy --mat2 data/example4/M.oryzae_TH12_ex4_JSD_scoop.mat --format2 numpy
+```
+
+Scoop can also be used to distribute the worker on a SGE cluster.
+However, the cluster must be set to allow ssh connection between nodes. 
+Please see with your IT administrator.
+
+
+
+
+
+

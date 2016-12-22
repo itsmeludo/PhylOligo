@@ -254,9 +254,7 @@ def JSD_h5py(output_dir, input, s):
     #hf.close()
     
 
-#### different flavor of parallelisms for distance computation
-    
-def compute_distances_pickle(frequencies, chunksize, metric="Eucl", n_jobs=1, workdir="/tmp/"):
+def compute_distances_scoop(frequencies, chunksize, metric="Eucl"):
     """ compute pairwises distances
     
     Parameters
@@ -265,78 +263,6 @@ def compute_distances_pickle(frequencies, chunksize, metric="Eucl", n_jobs=1, wo
         a list of frequencies, each row corresponding to a sample each column to a "word"
     metric: string
         distance method to use ('JSD', 'Eucl', 'KL')
-    n_jobs: int
-        number of parallel job to execute
-    
-    Return:
-    -------
-    distances: np.array
-        (n_samples, n_samples) distance matrix
-    """
-    #scoop.logger.info("Starting distance computation")
-    if metric == "Eucl":
-        pathin = tempfile.mktemp(dir=workdir)
-        pathout = tempfile.mktemp(dir=workdir)
-    
-        distances = np.zeros((len(frequencies), len(frequencies)), dtype=float)
-        for freqchunk in make_freqchunk(frequencies, chunksize):
-            with open(pathin, "wb") as outf:
-                pickle.dump(freqchunk, outf)
-            # subprocess the computation
-            cmd = "python3 -m scoop -n {} phylo_batchdist.py {} {} {}".format(n_jobs, pathin, pathout, metric)
-            cmd = shlex.split(cmd)
-            try:
-                res = subprocess.check_call(cmd)
-            except:
-                print("Error running phylo_batchdist.py on {} {} /{}".format(pathin, pathout, metric), file=sys.stderr)
-                sys.exit(1)
-                
-            with open(pathout, "rb") as inf:
-                res = pickle.load(inf)
-            #res = futures.map(compute_Eucl_unpack, freqchunk)
-            for i, j, d in res:
-                distances[i, j] = distances[j, i] = d
-        os.remove(pathin)
-        os.remove(pathout)
-    elif metric == "JSD":
-        pathin = tempfile.mktemp(dir=workdir)
-        pathout = tempfile.mktemp(dir=workdir)
-    
-        distances = np.zeros((len(frequencies), len(frequencies)), dtype=float)
-        for freqchunk in make_freqchunk(frequencies, chunksize):
-            with open(pathin, "wb") as outf:
-                pickle.dump(freqchunk, outf)
-            # subprocess the computation
-            cmd = "python3 -m scoop -n {} phylo_batchdist.py {} {} {}".format(n_jobs, pathin, pathout, metric)
-            cmd = shlex.split(cmd)
-            try:
-                res = subprocess.check_call(cmd)
-            except:
-                print("Error running phylo_batchdist.py on {} {} /{}".format(pathin, pathout, metric), file=sys.stderr)
-                sys.exit(1)    
-            with open(pathout, "rb") as inf:
-                res = pickle.load(inf)
-            #res = futures.map(compute_JSD_unpack, freqchunk)
-            for i, j, d in res:
-                distances[i, j] = distances[j, i] = d
-        os.remove(pathin)
-        os.remove(pathout)
-    else:
-        print("Error, unknown method {}".format(metric), file=sys.stderr)
-        sys.exit(1)
-    return distances
-    
-def compute_distances_scoop(frequencies, chunksize, metric="Eucl", n_jobs=1):
-    """ compute pairwises distances
-    
-    Parameters
-    ----------
-    frequencies: np.array
-        a list of frequencies, each row corresponding to a sample each column to a "word"
-    metric: string
-        distance method to use ('JSD', 'Eucl', 'KL')
-    n_jobs: int
-        number of parallel job to execute
     
     Return:
     -------
@@ -350,12 +276,14 @@ def compute_distances_scoop(frequencies, chunksize, metric="Eucl", n_jobs=1):
             res = futures.map(compute_Eucl_unpack, freqchunk)
             for i, j, d in res:
                 distances[i, j] = distances[j, i] = d
+                
     elif metric == "JSD":
         distances = np.zeros((len(frequencies), len(frequencies)), dtype=float)
         for freqchunk in make_freqchunk(frequencies, chunksize):
             res = futures.map(compute_JSD_unpack, freqchunk)
             for i, j, d in res:
                 distances[i, j] = distances[j, i] = d
+                
     else:
         print("Error, unknown method {}".format(metric), file=sys.stderr)
         sys.exit(1)
@@ -520,16 +448,14 @@ def compute_distances(mthdrun, large, frequencies, freq_name, out_file, dist, th
     if mthdrun == "joblib":
         if large == "memmap":
             #res = compute_distances_memmap(frequencies, freq_name, out_file, metric=dist, n_jobs=threads_max)
-            compute_distances_memmap(frequencies, freq_name, out_file, metric=dist, n_jobs=threads_max)  # LM : I remove assignation as we don't need to store it it seems as we pass the out file name and the lib shoiuld handle the writing.
+            compute_distances_memmap(frequencies, freq_name, out_file, metric=dist, n_jobs=threads_max)
         if large == "h5py":
             #res = compute_distances_h5py(freq_name, out_file, metric=dist, n_jobs=threads_max)
-            compute_distances_h5py(freq_name, out_file, metric=dist, n_jobs=threads_max) # LM : I remove assignation as we don't need to store it it seems as we pass the out file name and the lib shoiuld handle the writing.
+            compute_distances_h5py(freq_name, out_file, metric=dist, n_jobs=threads_max) 
         else:
             res = compute_distances_joblib(frequencies, freqchunksize, metric=dist, n_jobs=threads_max)
-    elif mthdrun == "scoop1":
-        res = compute_distances_scoop(frequencies, freqchunksize, metric=dist, n_jobs=threads_max)
-    elif mthdrun == "scoop2":
-        res = compute_distances_pickle(frequencies, freqchunksize, metric=dist, n_jobs=threads_max, workdir=workdir)
+    elif mthdrun == "scoop":
+        res = compute_distances_scoop(frequencies, freqchunksize, metric=dist)
     else:
         print("Error, method {} is not implemented for pairwise distances computation".format(mthdrun), file=sys.stderr)
     return res
@@ -1010,10 +936,8 @@ def compute_frequencies(mthdrun, large, genome, pattern, strand,
     """ choose which function to call to compute frequencies
     """
     freq_name = None
-    if mthdrun == "scoop1":
+    if mthdrun == "scoop":
         frequencies = compute_frequencies_scoop(genome, pattern, strand, distchunksize)
-    elif mthdrun == "scoop2":
-        frequencies = compute_frequencies_pickle(genome, pattern, strand, distchunksize, threads_max, workdir)
     elif mthdrun == "joblib":
         if large == "memmap":
             frequencies, freq_name = compute_frequencies_joblib_memmap(genome, pattern, strand, threads_max, workdir)
@@ -1033,7 +957,7 @@ def get_cmd():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--assembly", action="store", required=True, dest="genome", 
                         help="multifasta of the genome assembly")
-    parser.add_argument("-k", "--lgMot", action="store", dest="pattern", default=4,
+    parser.add_argument("-k", "--lgMot", action="store", dest="pattern", default=4, type=int,
                         help="word lenght / kmer length / k [default:%(default)d]")
     #parser.add_argument("-k", "--lgMot", action="store", dest="k", default="1111", 
                         #help="word lenght / kmer length / k [default:%(default)d]")
@@ -1045,7 +969,7 @@ def get_cmd():
                         help="the size of the chunk to use in scoop to compute frequencies")
     parser.add_argument("--dist-chunk-size", action="store", dest="distchunksize", type=int, default=250,
                         help="the size of the chunk to use in scoop to compute distances")
-    parser.add_argument("--method", action="store", choices=["scoop1", "scoop2", "joblib"], dest="mthdrun", help="don't use scoop to compute distances use joblib")
+    parser.add_argument("--method", action="store", choices=["scoop", "joblib"], dest="mthdrun", help="don't use scoop to compute distances use joblib", required=True)
     parser.add_argument("--large", action="store", dest="large", choices=["None", "memmap", "h5py"], help="used in combination with joblib for large dataset", default="None")
     parser.add_argument("-c", "--cpu", action="store", dest="threads_max", type=int, default=4, 
                         help="how many threads to use for windows microcomposition computation[default:%(default)d]")
@@ -1065,15 +989,10 @@ def main():
     params = get_cmd()
     
     # quick hack to turn the k-mer parameter into a pattern (whithout joker)
-    # TODO to be removed
     if type(params.pattern) == int:
-        params.pattern = str("1") * params.k
-    #elif not params.k and params.pattern:
-        #params.k = params.pattern[:]
-        #param.pattern=str(params.pattern)
+        params.pattern = str("1") * params.pattern
     
     print("Using pattern {}".format(params.pattern))
-    
     if not os.path.isdir(params.workdir):
         os.makedirs(params.workdir)
     
@@ -1096,9 +1015,9 @@ def main():
     return 0
        
 if __name__ == "__main__":
-    start = time.time()
+    #start = time.time()
     ret = main()      
-    stop = time.time()
-    print("Exec time: {}".format(stop-start))
+    #stop = time.time()
+    #print("Exec time: {}".format(stop-start))
     sys.exit(0)
 
