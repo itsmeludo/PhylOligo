@@ -126,11 +126,19 @@ cd PhylOligo
 pip3 install . --user
 ```
 
-In the last case, be sure to add the local directory with executable in your executable path.
+To install in locally in a folder of your choice use:
+```Bash
+pip3 install . --prefix <path of your choice>
+```
+
+
+If locally installed, be sure to add the local directory with executable in your executable path.
 On linux:
 
 ```Bash
 export PATH=$HOME/.local/bin:$PATH
+
+phyloligo.py -h
 ```
 
 * Install R scripts and dependencies
