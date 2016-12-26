@@ -96,7 +96,7 @@ Install
 
 PhyloOligo softwares need python 3.4 or newer and several R and python packages.
 
-If python or R are not install used on your system:
+If python or R are not installed on your system:
 ```Bash
 apt-get install python3-dev python3-setuptools r-base
 ```
@@ -126,9 +126,9 @@ cd PhylOligo
 pip3 install . --user
 ```
 
-To install in locally in a folder of your choice use:
+Or to install in locally in a folder of your choice:
 ```Bash
-pip3 install . --prefix <path of your choice>
+pip3 install . --prefix /my/local/folder
 ```
 
 
