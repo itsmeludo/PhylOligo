@@ -59,8 +59,6 @@ Parameters:
 note: PhyloSelect uses the library Ape and its interactive clade selection function on a tree plot with the mouse. X11 is therefore required. If the program has to run on a server -typically for memory reasons- please use the -X option of ssh to allow X11 forwarding.
 
 
-
-
 Regroup contigs by compositional similarity: hierarchical DBSCAN and MDS display with t-SNE
 -------------------------------------------------------------------------------------------
 
@@ -88,7 +86,40 @@ Parameters:
 
 
 
+Extract DNA segments with homogeneous olignonucleotide composition from a genome assembly using ContaLocate
+-----------------------------------------------------------------------------------------------------------
 
+* Learns a compositional profile for the host and the contaminant, previoulsy identified with phyloligo.py / phyloselect.{py,R}.
+* Generates a GFF3 map of the contaminant positions in the genome.
+ 
+Once you have explored your assembly's oligonucleotide composition, identified and selected -potentially partial- contaminant material, use ContaLocate to target species-specific contaminant DNA according to a double parametrical threshold.
+
+```bash
+contalocate.R -i genome.fasta -r genome_host.fa -c genome_conta_1.fa 
+```
+
+The training set for the host genome can be omitted if the amount of contaminant is negligible. In this case, the profile of the host will be trained on the whole genome, including the contaminant.
+```bash
+contalocate.R -i genome.fasta -c genome_conta_1.fa 
+```
+
+
+The set up of the thresholds can be manually enforced. The user will interactively prompted to set the thresholds given the distribution of windows divergence.
+```bash
+contalocate.R -i genome.fasta -c genome_conta_1.fa -m
+```
+
+Parameters:
+```
+    -i    --genome            Multifasta of the genome assembly (required)
+    -r    --host_learn        Host training set (optional)
+    -c    --conta_learn       Contaminant training set (optional) if missing and sliding window parameters are given, the sliding windows composition will be compared to the whole genome composition to contrast potential HGTs (prokaryotes and simple eukaryotes only)
+    -t    --win_step          Step of the sliding windows analysis to locate the contaminant (optional) default: 500bp or 100bp
+    -w    --win_size          Length of the sliding window to locate the contaminant (optional) default: 5000bp 
+    -d    --dist              Divergence metric used to compare profiles: (KL), JSD or Eucl
+    -m    --manual_threshold  You will be asked to manually set the thresholds
+    -h    --help              What it says
+```
 
 
 Install
@@ -141,6 +172,13 @@ export PATH=$HOME/.local/bin:$PATH
 phyloligo.py -h
 ```
 
+* Alternatively python requirements can be installed
+
+If you want to install the dependencies separately use:
+```Bash
+pip3 install -r requirements.txt
+```
+
 * Install R scripts and dependencies
 
 In R, as root or user
@@ -150,7 +188,8 @@ install.packages(c("ape","getopt","gplots"))
 
 Link the programs into a directory listed in your $PATH
 ```Bash
-ln -s "`pwd`/phyloselect.R" <a directory in your $PATH variable>
+ln -s "`pwd`/src/phyloselect.R" <a directory in your $PATH variable>
+ln -s `pwd`/src/contalocate.R <a directory in your $PATH variable>
 ```
 
 * EMBOSS / Samtools 
@@ -178,12 +217,6 @@ apt-get install emboss samtools
     * X11 (only required to run phyloselect.R)
 
     
-* Install python3, the latest R version, EMBOSS and Samtools [according to your system](https://xkcd.com/1654/) 
-
-If you want to install the dependencies separately use:
-```Bash
-pip3 install -r requirements.txt
-```
 
 Test and examples
 -----------------
