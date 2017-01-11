@@ -6,9 +6,9 @@ Explore oligonucleotide composition similarity between assembly contigs or scaff
 Generate the all-by-all contig distance matrix
 ----------------------------------------------
 
-    * Load and index the genome assembly sequences.
-    * Compute the kmer/spaced-pattern composition profile of each sequence in the assembly.
-    * Compute a pairwise distance matrix for all sequences. 
+* Load and index the genome assembly sequences.
+* Compute the kmer/spaced-pattern composition profile of each sequence in the assembly.
+* Compute a pairwise distance matrix for all sequences. 
 
 
 ```bash
@@ -63,13 +63,13 @@ Parameters:
 Regroup contigs by compositional similarity on a tree and explore branching
 ---------------------------------------------------------------------------
 
-    * Load the distance matrix produced by PhylOligo.
-    * Optionally create a hierarchically sorted distance matrix.
-    * Build a cladogram from the distance matrix.
-    * Interactively ask the user to explore the cladogram and select clads that might correspond to untargeted sequences based on the interpretation of the topology.
-    * Export clad-specific fasta files:
-        * To inspect their potential origin for example with blast or GOHTAM \citep{Menigaud}
-        * To use as learning material in ContaLocate
+* Load the distance matrix produced by PhylOligo.
+* Optionally create a hierarchically sorted distance matrix.
+* Build a cladogram from the distance matrix.
+* Interactively ask the user to explore the cladogram and select clads that might correspond to untargeted sequences based on the interpretation of the topology.
+* Export clad-specific fasta files:
+  * To inspect their potential origin for example with blast or GOHTAM \citep{Menigaud}
+  * To use as learning material in ContaLocate
 
 
 ```bash
