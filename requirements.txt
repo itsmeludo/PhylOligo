@@ -1,0 +1,7 @@
+biopython>=1.68
+scikit-learn>=0.18.1
+numpy>=1.11.2
+cython>=0.25.1
+hdbscan
+seaborn
+matplotlib
