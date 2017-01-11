@@ -1,4 +1,4 @@
-#!/usr/bin/Rscript
+#!/usr/bin/env Rscript
 
 ### Author: Ludovic V. Mallet, PhD
 ### 2016.03.22
@@ -25,15 +25,15 @@ dist="KL"
 
 
 spec <- matrix(c(
-        'genome'         , 'i', 1, "character", "file from fastq-stats -x (required)",
-        'host_learn'     , 'r', 2, "character", "input gc content file (optional)",
-        'conta_learn'    , 'c', 1, "character", "output filename (optional)",
-        'win_step'       , 't', 2, "int", "output filename (optional)",
-        'win_size'       , 'w', 2, "int", "output filename (optional)",
+        'genome'         , 'i', 1, "character", "Multifasta of the genome assembly (required)",
+        'host_learn'     , 'r', 2, "character", "Host training set (optional)",
+        'conta_learn'    , 'c', 1, "character", "Contaminant training set (optional) if missing and sliding window parameters are given, the sliding windows composition will be compared to the whole genome composition to contrast potential HGTs (prokaryotes and simple eukaryotes only)",
+        'win_step'       , 't', 2, "int", "Step of the sliding windows analysis to locate the contaminant (optional) default: 500bp or 100bp",
+        'win_size'       , 'w', 2, "int", "Length of the sliding window to locate the contaminant (optional) default: 5000bp ",
         'outputdir'      , 'W', 1, "character", "path to outputdir directory",
         'dist'           , 'd', 2, "character", "Divergence metric used to compare profiles: (KL), JSD or Eucl",
         'manual_threshold' , 'm', 0, "logical", "You will be asked to manually set the thresholds",
-        'help'           , 'h', 0, "logical",   "this help"
+        'help'           , 'h', 0, "logical",   "This help"
 ),ncol=5,byrow=T)
 
 #         
