@@ -68,7 +68,7 @@ Regroup contigs by compositional similarity on a tree and explore branching
 * Build a cladogram from the distance matrix.
 * Interactively ask the user to explore the cladogram and select clads that might correspond to untargeted sequences based on the interpretation of the topology.
 * Export clad-specific fasta files:
-  * To inspect their potential origin for example with blast or GOHTAM \citep{Menigaud}
+  * To inspect their potential origin for example with blast or GOHTAM Ménigaud /et al./ 2012
   * To use as learning material in ContaLocate
 
 
@@ -129,6 +129,12 @@ note: PhyloSelect uses the library Ape and its interactive clade selection funct
 Regroup contigs by compositional similarity: hierarchical DBSCAN and MDS display with t-SNE
 -------------------------------------------------------------------------------------------
 
+* Load the distance matrix produced by PhylOligo.
+* Clusterize the sequences
+* Export cluster-specific fasta files:
+  * To inspect their potential origin for example with blast or GOHTAM Ménigaud /et al./ 2012
+  * To use as learning material in ContaLocate
+
 ```bash
 phyloselect.py -i genome.JSD.mat -t -m hdbscan --noX -o genome_conta
 
@@ -136,19 +142,28 @@ phyloselect.py -i genome.JSD.mat -t -m hdbscan --noX -o genome_conta
 ```
 Parameters:
 ```
-    -i                      The input matrix file
-    -t                      Perform t-SNE for visualization and pre-clustering
-    -p                      Change the perplexity value for t-SNE
-    -m                      Method to use to compute cluster on transformed distance matrix{hdbscan,kmedoids}
-           --minclustersize Set the minimal cluster size of an HDBSCAN cluster
-           --minsamples     Set the minimal sample size of an HDBSCAN cluster
-    -k                      Number of clusters if kmedoids is used
-    -f                      Path of the original fasta file used for the computation of the distance matrix                 
-           --interactive    Allow the user to run the script in an interactive mode and change clustering parameter on the fly (require -t)
-           --large          Used in combination with joblib for large dataset
-           --noX            Instead of showing pictures, store them in pdf
-    -o                      OUTPUTDIR
-    -h      --help          Show this help message and exit
+  -h, --help            show this help message and exit
+  -i DISTMAT            The input matrix file
+  -t                    Perform tsne for visualization and pre-clustering
+  -p PERPLEXITY         Change the perplexity value
+  -m {hdbscan,kmedoids}
+                        Method to use to compute cluster on transformed
+                        distance matrix
+  --minclustersize MIN_CLUSTER_SIZE
+                        Set the minimal cluster size of an HDBSCAN cluster
+  --minsamples MIN_SAMPLES
+                        Set the minimal sample size of an HDBSCAN cluster
+  -k NBK                Number of cluster
+  -f FASTAFILE          Path of the original fasta file used for the
+                        computation of the distance matrix
+  --interactive         Allow the user to run the script in an interactive
+                        mode and change clustering parameter on the fly
+                        (require -t)
+  --large {memmap,h5py}
+                        Used in combination with joblib for large dataset
+  --noX                 Instead of showing pictures, store them in png
+  -o OUTPUTDIR
+
 ```
 
 
@@ -178,15 +193,49 @@ contalocate.R -i genome.fasta -c genome_conta_1.fa -m
 
 Parameters:
 ```
-    -i    --genome            Multifasta of the genome assembly (required)
-    -r    --host_learn        Host training set (optional)
-    -c    --conta_learn       Contaminant training set (optional) if missing and sliding window parameters are given, the sliding windows composition will be compared to the whole genome composition to contrast potential HGTs (prokaryotes and simple eukaryotes only)
-    -t    --win_step          Step of the sliding windows analysis to locate the contaminant (optional) default: 500bp or 100bp
-    -w    --win_size          Length of the sliding window to locate the contaminant (optional) default: 5000bp 
-    -d    --dist              Divergence metric used to compare profiles: (KL), JSD or Eucl
-    -m    --manual_threshold  You will be asked to manually set the thresholds
-    -h    --help              What it says
+    -i|--genome              Multifasta of the genome assembly (required)
+    -r|--host_learn          Host training set (optional)
+    -c|--conta_learn         Contaminant training set (optional) if missing and sliding window parameters are given, the sliding windows composition will be compared to the whole genome composition to contrast potential HGTs (prokaryotes and simple eukaryotes only)
+    -t|--win_step            Step of the sliding windows analysis to locate the contaminant (optional) default: 500bp or 100bp
+    -w|--win_size            Length of the sliding window to locate the contaminant (optional) default: 5000bp 
+    -W|--outputdir           path to outputdir directory
+    -d|--dist                Divergence metric used to compare profiles: (KL), JSD or Eucl
+    -m|--manual_threshold    You will be asked to manually set the thresholds
+    -h|--help                This help
+
 ```
+
+
+
+
+
+Preprocess the original assembly/raw reads in order to filter out entries, reduce computational time and increase signal
+-----------------------------------------------------------------------------------------------------------------------
+
+Filter short sequences or highly conserved repeats.
+
+* Reads an assembly or long sequencing reads multi-fasta file
+* Output filtered dataset
+
+
+```bash
+phylopreprocess.py [-h] -i INPUTFASTA [-p PERCENTILE] [-m MIN_READSIZE] [-s SAMPLING] [-r] [-o OUTPUTFASTA]
+```
+
+
+Parameters:
+```
+  -h, --help       show this help message and exit
+  -i INPUTFASTA
+  -p PERCENTILE    remove read of size not in Xth percentile
+  -m MIN_READSIZE  remove reads shorter than the provided minimal size
+  -s SAMPLING      percentage of read to sample
+  -r               the order of the reads are randomized
+  -o OUTPUTFASTA
+
+```
+
+
 
 
 Install
@@ -196,7 +245,7 @@ PhyloOligo softwares need python 3.4 or newer and several R and python packages.
 
 If python or R are not installed on your system:
 ```Bash
-apt-get install python3-dev python3-setuptools r-base
+apt-get install python3-dev python3-setuptools r-base git emboss samtools
 ```
 
 * Clone/download the git repository.
