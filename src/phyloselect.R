@@ -240,30 +240,30 @@ interactive_mode=function(){
     library(ape)
     X11(width=12,height=10)
     edge_size=edge_size/sum(edge_size)*100*branchwidth
-    plot.phylo(tree,use.edge.length=branchlength,type=opt[["tree_draw_method"]],show.tip.label=FALSE,edge.width=edge_size)
+    plot.phylo(tree,use.edge.length=branchlength,type=tree_draw_method,show.tip.label=FALSE,edge.width=edge_size)
     edgelabels(text=edge_lab,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5)
-    clade_select(tree,return.tree=TRUE,type=opt[["tree_draw_method"]],use.edge.length=branchlength,font=2,edge_size=edge_size,edge_label=edge_lab)
+    clade_select(tree,return.tree=TRUE,type=tree_draw_method,use.edge.length=branchlength,font=2,edge_size=edge_size,edge_label=edge_lab)
 }
 
 # branchlength=FALSE
 
 spec <- matrix(c(
-  'matrix'         , 'i', 1, "character", "all-by-all contig distance matrix, tab separated (required)",
-  'assembly'         , 'a', 1, "character", "multifasta file of the contigs (required)",
-  'tree_draw_method'     , 'f', 2, "character", "tree building type. [phylogram, cladogram, fan, unrooted, radial] by default cladogram.",
-  'tree_building_method'     , 't', 2, "character", "tree drawing type [NJ, UPGMA, BIONJ, wardD, wardD2, Hsingle, Hcomplete, WPGMA, WPGMC, UPGMC] by default NJ.",
+  'matrix'         , 'i', 1, "character", "All-by-all contig distance matrix, tab separated (required)",
+  'assembly'         , 'a', 1, "character", "Multifasta file of the contigs (required)",
+  'tree_draw_method'     , 'f', 2, "character", "Tree building type. [phylogram, cladogram, fan, unrooted, radial] by default cladogram.",
+  'tree_building_method'     , 't', 2, "character", "Tree drawing type [NJ, UPGMA, BIONJ, wardD, wardD2, Hsingle, Hcomplete, WPGMA, WPGMC, UPGMC] by default NJ.",
   'matrix_heatmap'     , 'm', 0, "logical", "Should a matrix heatmap should be produced",
   'distance_clip_percentile'     , 'c', 2, "double", "Threshold to exclude very distant contigs based on the distance distribution. Use if the tree is squashed by repeats or degenerated/uninformative contigs [0.97]",
   'contig_min_size'     , 's', 2, "double", "Min length in bp of contigs to use in the matrix and tree. Use if the tree is squashed by repeats or degenerated/uninformative contigs [4000]",
-  'dump_R_session'     , 'd', 0, "logical", "Should the R environment be saved for later exploration? the filename will be generated from the outfile parameter or its default value",
-  'max_perc'     , 'g', 2, "double", "max edge assembly length percentage displayed (%)",
-  'min_perc'     , 'l', 2, "double", "min edge assembly length percentage displayed (%)",
-  'keep_perc'           , 'k', 2, "double",   "ratio of out-of-range percentages to display (%)",
-  'outfile'     , 'o', 2, "character", "outfile name, default:phyloligo.out",
-  'branchlength'           , 'b', 0, "logical",   "display branch length",
+  'dump_R_session'     , 'd', 0, "logical", "Should the R environment be saved for later exploration? The filename will be generated from the outfile parameter or its default value",
+  'max_perc'     , 'g', 2, "double", "Max edge assembly length percentage displayed (%)",
+  'min_perc'     , 'l', 2, "double", "Min edge assembly length percentage displayed (%)",
+  'keep_perc'           , 'k', 2, "double",   "Ratio of out-of-range percentages to display (%)",
+  'outfile'     , 'o', 2, "character", "Outfile name, default:phyloligo.out",
+  'branchlength'           , 'b', 0, "logical",   "Display branch length",
   'branchwidth'           , 'w', 2, "double",   "Branch width factor [40]",
-  'verbose'           , 'v', 0, "logical",   "say what the program do. Not implemented yet.",
-  'help'           , 'h', 0, "logical",   "this help"
+  'verbose'           , 'v', 0, "logical",   "Say what the program do.",
+  'help'           , 'h', 0, "logical",   "This help."
 ),ncol=5,byrow=T)
 
 
@@ -433,7 +433,7 @@ X11(width=12,height=10) # external display when script is launched with Rscript 
 
 edge_size=edge_size/sum(edge_size)*100*branchwidth
 
-plot(tree,use.edge.length=branchlength,type=opt[["tree_draw_method"]],show.tip.label=FALSE,edge.width=edge_size)
+plot(tree,use.edge.length=branchlength,type=tree_draw_method,show.tip.label=FALSE,edge.width=edge_size)
 #plot(tree,use.edge.length=FALSE,type="c",show.tip.label=FALSE,edge.width=edge_size/sum(edge_size)*100*15,edge.color = colfunc(100)[round(edge_perc)])
 edgelabels(text=edge_lab,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5)
 
@@ -449,7 +449,7 @@ if (!is.null(opt[["dump_R_session"]])) {
 }
 
 if (opt[["verbose"]]) print(paste(date(), "Entering interactive mode of clade selection to constitute learning sets for contalocate"))
-clade_select(tree,return.tree=TRUE,type=opt[["tree_draw_method"]],use.edge.length=branchlength,font=2,edge_size=edge_size,edge_label=edge_lab)
+clade_select(tree,return.tree=TRUE,type=tree_draw_method,use.edge.length=branchlength,font=2,edge_size=edge_size,edge_label=edge_lab)
 
 # Export clade-corresponding contig in fasta format
 
