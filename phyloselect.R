@@ -193,6 +193,8 @@ clade_select<-function(phy, title = TRUE, subbg = "white", return.tree = FALSE,e
             cmd=paste("samtools faidx ",assembly," '",paste(paste(tr$tip.label,collapse="' '",sep=""),"'",sep=""), " > ",outfile,"_",subset,".fa",sep="" )
             print(cmd)
             system(cmd)
+            write(tr$tip.label,ncolumns=1, file=paste(outfile,"_",subset,".lst",sep="" ))
+           
 #             plots à join colored mapping  to each selected clade:
             pdf(file=paste(outfile,"_",subset,".pdf",sep=""),width=36,height=24)
                 plot(phy,use.edge.length=lastPP$use.edge.length,type=lastPP$type,show.tip.label=lastPP$show.tip.label,edge.width=edge_size_tree,edge.color=edge_selected_color)
@@ -281,7 +283,7 @@ if (is.null(opt[["verbose"]])) {
 outfile = ifelse(is.null(opt[["outfile"]]), outfile <- "phyloligo.out" , outfile <-opt[["outfile"]])
 branchlength = ifelse(is.null(opt[["branchlength"]]), branchlength <- FALSE , branchlength <-TRUE)
 keep_perc = ifelse(is.null(opt[["keep_perc"]]), keep_perc <- 5 , keep_perc <-opt[["keep_perc"]])
-tree_draw_method = ifelse(is.null(opt[["tree_draw_method"]]), tree_draw_method <- "c" , tree_draw_method <-opt[["tree_draw_method"]])
+tree_draw_method = ifelse(is.null(opt[["tree_draw_method"]]), tree_draw_method <- "cladogram" , tree_draw_method <-opt[["tree_draw_method"]])
 tree_building_method = ifelse(is.null(opt[["tree_building_method"]]), tree_building_method <- "NJ" , tree_building_method <-opt[["tree_building_method"]])
 min_perc = ifelse(is.null(opt[["min_perc"]]), min_perc <- 0.5 , min_perc <-opt[["min_perc"]])
 max_perc = ifelse(is.null(opt[["max_perc"]]), max_perc <- 30 , max_perc <-opt[["max_perc"]])
