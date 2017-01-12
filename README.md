@@ -126,8 +126,8 @@ Parameters:
 note: PhyloSelect uses the library Ape and its interactive clade selection function on a tree plot with the mouse. X11 is therefore required. If the program has to run on a server -typically for memory reasons- please use the -X option of ssh to allow X11 forwarding.
 
 
-Regroup contigs by compositional similarity: hierarchical DBSCAN and MDS display with t-SNE
--------------------------------------------------------------------------------------------
+Regroup contigs by compositional similarity: hierarchical DBSCAN or K-medoids clustering and multidimensional scaling display with t-SNE
+----------------------------------------------------------------------------------------------------------------------------------------
 
 * Load the distance matrix produced by PhylOligo.
 * Clusterize the sequences
@@ -273,7 +273,7 @@ cd PhylOligo
 pip3 install . --user
 ```
 
-Or to install in locally in a folder of your choice:
+Or to install it locally in a folder of your choice:
 ```Bash
 pip3 install . --prefix /my/local/folder
 ```
