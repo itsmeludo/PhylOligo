@@ -138,7 +138,7 @@ clade_select<-function(phy, title = TRUE, subbg = "white", return.tree = FALSE,e
       
       plot(phy,use.edge.length=lastPP$use.edge.length,type=lastPP$type,show.tip.label=lastPP$show.tip.label,edge.width=edge_size_tree,edge.color=edge_selected_color)
       edgelabels(text=edge_label,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5,col = edge_selected_color)
-      
+      add.scale.bar(cex = 0.7, font = 2)
       if (is.null(x))
         cat("Try again!\n")
       else{
@@ -161,14 +161,18 @@ clade_select<-function(phy, title = TRUE, subbg = "white", return.tree = FALSE,e
           edge.width<-es
           if(tr$Nnode<=lim_tip){
             plot(tr,edge.width=es,cex=cex_tip,...) 
+            add.scale.bar(cex = 0.7, font = 2)
           }else{
             plot(tr,edge.width=es,show.tip.label=F,...)
+            add.scale.bar(cex = 0.7, font = 2)
           }
         }else{
           if(tr$Nnode<=lim_tip){
-            plot(tr,cex=cex_tip,...) 
+            plot(tr,cex=cex_tip,...)
+            add.scale.bar(cex = 0.7, font = 2)
           }else{
             plot(tr,show.tip.label=F,...)
+            add.scale.bar(cex = 0.7, font = 2)
           }
         }
         if(!is.null(edge_label)){
@@ -197,6 +201,7 @@ clade_select<-function(phy, title = TRUE, subbg = "white", return.tree = FALSE,e
             pdf(file=paste(outfile,"_",subset,".pdf",sep=""),width=36,height=24)
                 plot(phy,use.edge.length=lastPP$use.edge.length,type=lastPP$type,show.tip.label=lastPP$show.tip.label,edge.width=edge_size_tree,edge.color=edge_selected_color)
                 edgelabels(text=edge_label,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5,col = edge_selected_color)
+                add.scale.bar(cex = 0.7, font = 2)
             dev.off()
             if (opt[["verbose"]]) print(paste(date(), "User exported a clade stored in ",paste(outfile,"_",subset,".fa",sep="")))
             subset=subset+1
@@ -205,6 +210,7 @@ clade_select<-function(phy, title = TRUE, subbg = "white", return.tree = FALSE,e
             restore()
             plot(phy,use.edge.length=lastPP$use.edge.length,type=lastPP$type,show.tip.label=lastPP$show.tip.label,edge.width=edge_size_tree)
             edgelabels(text=edge_label,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5)
+            add.scale.bar(cex = 0.7, font = 2)
       }
     }
   }
@@ -242,6 +248,7 @@ interactive_mode=function(){
     edge_size=edge_size/sum(edge_size)*100*branchwidth
     plot.phylo(tree,use.edge.length=branchlength,type=tree_draw_method,show.tip.label=FALSE,edge.width=edge_size)
     edgelabels(text=edge_lab,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5)
+    add.scale.bar(cex = 0.7, font = 2)
     clade_select(tree,return.tree=TRUE,type=tree_draw_method,use.edge.length=branchlength,font=2,edge_size=edge_size,edge_label=edge_lab)
 }
 
@@ -436,6 +443,7 @@ edge_size=edge_size/sum(edge_size)*100*branchwidth
 plot(tree,use.edge.length=branchlength,type=tree_draw_method,show.tip.label=FALSE,edge.width=edge_size)
 #plot(tree,use.edge.length=FALSE,type="c",show.tip.label=FALSE,edge.width=edge_size/sum(edge_size)*100*15,edge.color = colfunc(100)[round(edge_perc)])
 edgelabels(text=edge_lab,adj=c(0.5,-0.5),frame="none",font=2,cex=0.5)
+add.scale.bar(cex = 0.7, font = 2)
 
 if (opt[["verbose"]]) print(paste(date(), "Indexing fasta file"))
 ###manually selecting the subtree of the putative contaminant:
