@@ -24,7 +24,7 @@ setup(name='phyloligo',
     author_email='ludovic.mallet@inra.fr, tristan.bitard-feildel@impmc.upmc.fr',
     license='MIT',
     scripts=['src/phyloligo.py', 'src/phyloselect.py',
-             'src/phyloligo_comparemat.py'
+             'src/phyloligo_comparemat.py',
              'src/Kount.py', 
              ],
     packages=find_packages(exclude=["src/"]),
