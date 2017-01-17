@@ -8,7 +8,6 @@ K-medoids by :
     
 """
 import matplotlib
-
 #matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
@@ -310,30 +309,30 @@ class KMedoids(BaseEstimator, ClusterMixin, TransformerMixin):
 def get_cmd():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", action="store", dest="distmat", required=True, 
-                        help="the input matrix file")
+                        help="The input matrix file")
     parser.add_argument("-t", action="store_true", dest="performtsne", default=False,
-                        help="perform t-SNE for visualization and pre-clustering")
+                        help="Perform t-SNE for visualization and pre-clustering")
     parser.add_argument("-p", action="store", dest="perplexity", default=100, type=int, 
-                        help="change the perplexity value of t-SNE [default:%(default)d]")
+                        help="Change the perplexity value of t-SNE [default:%(default)d]")
     parser.add_argument("-m", action="store", dest="method", required=True, choices=["hdbscan", "kmedoids"], 
-                        help="method to use to compute cluster on transformed distance matrix")
+                        help="Method to use to compute cluster on transformed distance matrix")
     parser.add_argument("--minclustersize", action="store", dest="min_cluster_size", type=int, 
-                        help="set the minimal cluster size of an HDBSCAN cluster")
+                        help="Set the minimal cluster size of an HDBSCAN cluster")
     parser.add_argument("--minsamples", action="store", dest="min_samples", type=int, 
-                        help="set the minimal sample size of an HDBSCAN cluster")
+                        help="Set the minimal sample size of an HDBSCAN cluster")
     parser.add_argument("-k", action="store", dest="nbk", type=int, 
-                        help="number of cluster")
+                        help="Number of cluster")
     parser.add_argument("-f", action="store", dest="fastafile", 
-                        help="path of the original fasta file used for the computation of the distance matrix, required to write classified reads")
+                        help="Path of the original fasta file used for the computation of the distance matrix, required to write classified reads")
     parser.add_argument("--interactive", action="store_true", dest="interactive", default=False,
-                        help="allow the user to run the script in an interactive mode and change "
+                        help="Allow the user to run the script in an interactive mode and change "
                         "clustering parameter on the fly (require -t)")
-    parser.add_argument("--large", action="store", choices=["memmap", "h5py"], dest="large", help="used in combination with "
+    parser.add_argument("--large", action="store", choices=["memmap", "h5py"], dest="large", help="Used in combination with "
                         "joblib for large dataset", default=False)
-    parser.add_argument("--noX", action="store_true", dest="noX", help="instead of showing pictures, "
+    parser.add_argument("--noX", action="store_true", dest="noX", help="Instead of showing pictures, "
                         "store them in png")
-    parser.add_argument("-o", action="store", dest="outputdir", required=True, help="the output directory to save results")
-    parser.add_argument("--color-palette", action="store", dest="palette_name", help="matplotlib color palette name")
+    parser.add_argument("-o", action="store", dest="outputdir", required=True, help="The output directory to save results")
+    parser.add_argument("--color-palette", action="store", dest="palette_name", help="Matplotlib color palette name")
     params = parser.parse_args()
     
     if params.interactive and not params.performtsne:

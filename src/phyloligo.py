@@ -932,7 +932,7 @@ def get_cmd():
                         help="the size of the chunk to use in scoop to compute frequencies")
     parser.add_argument("--dist-chunk-size", action="store", dest="distchunksize", type=int, default=250,
                         help="the size of the chunk to use in scoop to compute distances")
-    parser.add_argument("--method", action="store", choices=["scoop", "joblib"], dest="mthdrun", help="don't use scoop to compute distances use joblib", required=True)
+    parser.add_argument("--method", action="store", choices=["scoop", "joblib"], default= "joblib",dest="mthdrun", help="don't use scoop to compute distances use joblib", required=True)
     parser.add_argument("--large", action="store", dest="large", choices=["None", "memmap", "h5py"], help="used in combination with joblib for large dataset", default="None")
     parser.add_argument("-c", "--cpu", action="store", dest="threads_max", type=int, default=4, 
                         help="how many threads to use for windows microcomposition computation[default:%(default)d]")

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """ pre-processing of reads
 
 - filter short reads
@@ -17,7 +17,7 @@ import numpy as np
 
 def get_cmd():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", action="store", dest="inputfasta")
+    parser.add_argument("-i", action="store",  required=True,dest="inputfasta")
     #parser.add_argument("-l", action="store", dest="labels")
     
     parser.add_argument("-p", action="store", dest="percentile", type=float,

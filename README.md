@@ -5,23 +5,55 @@ Explore oligonucleotide composition similarity between assembly contigs or scaff
 
 Generate the all-by-all contig distance matrix
 ----------------------------------------------
+
+* Load and index the genome assembly sequences.
+* Compute the kmer/spaced-pattern composition profile of each sequence in the assembly.
+* Compute a pairwise distance matrix for all sequences. 
+
+
 ```bash
 phyloligo.py -d JSD -i genome.fasta -o genome.JSD.mat -u 64
 ```
 Parameters:
 ```
-    -i      --assembly          Multifasta of the genome assembly
-    -k      --lgMot             word lenght / kmer length / k [default:4]
-    -s      --strand            Strand used to compute microcomposition. {both,plus,minus} [default:both]
-    -d      --distance          How to compute distance between two signatures : Eucl : Euclidean[default:Eucl], JSD : Jensen-Shannon divergence{Eucl,JSD}          
-            --freq-chunk-size   The size of the chunk to use in scoop to compute frequencies
-            --dist-chunk-size   The size of the chunk to use in scoop to compute distances
-            --method            Which computaional optimisation to use to compute distances {scoop1,scoop2,joblib}            
-            --large             Used in combination with joblib for large datasets
-    -c      --cpu               How many threads to use for contigs microcomposition computation[default:4]                
-    -o      --out               Output file[default:phyloligo.out]
-    -w      --workdir           Working directory
-    -h      --help              Show this help message and exit
+  -h, --help            show this help message and exit
+  -i GENOME, --assembly GENOME
+                        multifasta of the genome assembly
+  -k PATTERN, --lgMot PATTERN
+                        word lenght / kmer length / k [default:4]. This option
+                        is an alias for --pattern (see -p). If the type of the
+                        parameter is an integer, it will be interpreted as the
+                        lenght of the kmer to use. If the type of the
+                        parameter is a string, it will be interpreted as a
+                        spaced-pattern.
+  -s {both,plus,minus}, --strand {both,plus,minus}
+                        strand used to compute microcomposition.
+                        [default:both]
+  -d {Eucl,JSD}, --distance {Eucl,JSD}
+                        how to compute distance between two signatures : Eucl
+                        : Euclidean[default:Eucl], JSD : Jensen-Shannon
+                        divergence
+  --freq-chunk-size FREQCHUNKSIZE
+                        the size of the chunk to use in scoop to compute
+                        frequencies
+  --dist-chunk-size DISTCHUNKSIZE
+                        the size of the chunk to use in scoop to compute
+                        distances
+  --method {scoop,joblib}
+                        don't use scoop to compute distances use joblib
+  --large {None,memmap,h5py}
+                        used in combination with joblib for large dataset
+  -c THREADS_MAX, --cpu THREADS_MAX
+                        how many threads to use for windows microcomposition
+                        computation[default:4]
+  -o OUT_FILE, --out OUT_FILE
+                        output file[default:phyloligo.out]
+  -w WORKDIR, --workdir WORKDIR
+                        working directory
+  -p PATTERN, --pattern PATTERN
+                        spaced-word pattern string, only containing 1s and 0s,
+                        i.e. '100101001', default='1111'. See -k / --lgMot.
+
 ```
 
 
@@ -31,36 +63,77 @@ Parameters:
 Regroup contigs by compositional similarity on a tree and explore branching
 ---------------------------------------------------------------------------
 
+* Load the distance matrix produced by PhylOligo.
+* Optionally create a hierarchically sorted distance matrix.
+* Build a cladogram from the distance matrix.
+* Interactively ask the user to explore the cladogram and select clads that might correspond to untargeted sequences based on the interpretation of the topology.
+* Export clad-specific fasta files:
+  * To inspect their potential origin for example with blast or GOHTAM Ménigaud /et al./ 2012
+  * To use as learning material in ContaLocate
+
+
 ```bash
 phyloselect.R -d -m -c 0.95 -s 4000 -t BIONJ -f c -w 20  -i genome.JSD.mat -a genome.fasta -o genome_conta 
 
 ```
 
+
+
 Parameters:
 ```
-    -i     --matrix                      all-by-all contig distance matrix, tab separated (required)
-    -a     --assembly                    multifasta file of the contigs (required)
-    -f     --tree_draw_method            tree building type. [phylogram, cladogram, fan, unrooted, radial] by default cladogram.
-    -t     --tree_building_method        tree drawing type [NJ, UPGMA, BIONJ, wardD, wardD2, Hsingle, Hcomplete, WPGMA, WPGMC, UPGMC] by default NJ.
-    -m     --matrix_heatmap              Should a matrix heatmap should be produced
-    -c     --distance_clip_percentile    Threshold to exclude very distant contigs based on the distance distribution. Use if the tree is squashed by repeats or degenerated/uninformative contigs [0.97]
-    -s     --contig_min_size             Min length in bp of contigs to use in the matrix and tree. Use if the tree is squashed by repeats or degenerated/uninformative contigs [4000]
-    -d     --dump_R_session              Should the R environment be saved for later exploration? the filename will be generated from the outfile parameter or its default value
-    -g     --max_perc                    max edge assembly length percentage displayed (%)
-    -l     --min_perc                    min edge assembly length percentage displayed (%)
-    -k     --keep_perc                   ratio of out-of-range percentages to display (%)
-    -o     --outfile                     outfile name, default:phyloligo.out
-    -b     --branchlength                display branch length
-    -w     --branchwidth                 Branch width factor [40]
-    -v     --verbose                     say what the program do. Not implemented yet.
-    -h     --help                        Yep, does that.
+    -i|--matrix                      
+                    All-by-all contig distance matrix, tab separated (required)
+    -a|--assembly                    
+                    Multifasta file of the contigs (required)
+    -f|--tree_draw_method            
+                    Tree building type. [phylogram, cladogram,
+                    fan, unrooted, radial] by default cladogram.
+    -t|--tree_building_method        
+                    Tree drawing type [NJ, UPGMA, BIONJ, wardD,
+                    wardD2, Hsingle, Hcomplete, WPGMA, WPGMC, UPGMC] by default NJ.
+    -m|--matrix_heatmap              
+                    Should a matrix heatmap should be produced
+    -c|--distance_clip_percentile    
+                    Threshold to exclude very distant contigs based on the distance
+                    distribution. Use if the tree is squashed by repeats or 
+                    degenerated/uninformative contigs [0.97]
+    -s|--contig_min_size             
+                    Min length in bp of contigs to use in the matrix and tree.
+                    Use if the tree is squashed by repeats or 
+                    degenerated/uninformative contigs [4000]
+    -d|--dump_R_session              
+                    Should the R environment be saved for later exploration?
+                    The filename will be generated from the outfile parameter
+                    or its default value
+    -g|--max_perc                    
+                    Max edge assembly length percentage displayed (%)
+    -l|--min_perc                    
+                    Min edge assembly length percentage displayed (%)
+    -k|--keep_perc                   
+                    Ratio of out-of-range percentages to display (%)
+    -o|--outfile                     
+                    Outfile name, default:phyloligo.out
+    -b|--branchlength                
+                    Display branch length
+    -w|--branchwidth                 
+                    Branch width factor [40]
+    -v|--verbose                     
+                    Says what the program do.
+    -h|--help                        
+                    This help.
 ```
 
 note: PhyloSelect uses the library Ape and its interactive clade selection function on a tree plot with the mouse. X11 is therefore required. If the program has to run on a server -typically for memory reasons- please use the -X option of ssh to allow X11 forwarding.
 
 
-Regroup contigs by compositional similarity: hierarchical DBSCAN and MDS display with t-SNE
--------------------------------------------------------------------------------------------
+Regroup contigs by compositional similarity: hierarchical DBSCAN or K-medoids clustering and multidimensional scaling display with t-SNE
+----------------------------------------------------------------------------------------------------------------------------------------
+
+* Load the distance matrix produced by PhylOligo.
+* Clusterize the sequences
+* Export cluster-specific fasta files:
+  * To inspect their potential origin for example with blast or GOHTAM Ménigaud /et al./ 2012
+  * To use as learning material in ContaLocate
 
 ```bash
 phyloselect.py -i genome.JSD.mat -t -m hdbscan --noX -o genome_conta
@@ -69,19 +142,28 @@ phyloselect.py -i genome.JSD.mat -t -m hdbscan --noX -o genome_conta
 ```
 Parameters:
 ```
-    -i                      The input matrix file
-    -t                      Perform t-SNE for visualization and pre-clustering
-    -p                      Change the perplexity value for t-SNE
-    -m                      Method to use to compute cluster on transformed distance matrix{hdbscan,kmedoids}
-           --minclustersize Set the minimal cluster size of an HDBSCAN cluster
-           --minsamples     Set the minimal sample size of an HDBSCAN cluster
-    -k                      Number of clusters if kmedoids is used
-    -f                      Path of the original fasta file used for the computation of the distance matrix                 
-           --interactive    Allow the user to run the script in an interactive mode and change clustering parameter on the fly (require -t)
-           --large          Used in combination with joblib for large dataset
-           --noX            Instead of showing pictures, store them in pdf
-    -o                      OUTPUTDIR
-    -h      --help          Show this help message and exit
+  -h, --help            show this help message and exit
+  -i DISTMAT            The input matrix file
+  -t                    Perform tsne for visualization and pre-clustering
+  -p PERPLEXITY         Change the perplexity value
+  -m {hdbscan,kmedoids}
+                        Method to use to compute cluster on transformed
+                        distance matrix
+  --minclustersize MIN_CLUSTER_SIZE
+                        Set the minimal cluster size of an HDBSCAN cluster
+  --minsamples MIN_SAMPLES
+                        Set the minimal sample size of an HDBSCAN cluster
+  -k NBK                Number of cluster
+  -f FASTAFILE          Path of the original fasta file used for the
+                        computation of the distance matrix
+  --interactive         Allow the user to run the script in an interactive
+                        mode and change clustering parameter on the fly
+                        (require -t)
+  --large {memmap,h5py}
+                        Used in combination with joblib for large dataset
+  --noX                 Instead of showing pictures, store them in png
+  -o OUTPUTDIR
+
 ```
 
 
@@ -111,15 +193,49 @@ contalocate.R -i genome.fasta -c genome_conta_1.fa -m
 
 Parameters:
 ```
-    -i    --genome            Multifasta of the genome assembly (required)
-    -r    --host_learn        Host training set (optional)
-    -c    --conta_learn       Contaminant training set (optional) if missing and sliding window parameters are given, the sliding windows composition will be compared to the whole genome composition to contrast potential HGTs (prokaryotes and simple eukaryotes only)
-    -t    --win_step          Step of the sliding windows analysis to locate the contaminant (optional) default: 500bp or 100bp
-    -w    --win_size          Length of the sliding window to locate the contaminant (optional) default: 5000bp 
-    -d    --dist              Divergence metric used to compare profiles: (KL), JSD or Eucl
-    -m    --manual_threshold  You will be asked to manually set the thresholds
-    -h    --help              What it says
+    -i|--genome              Multifasta of the genome assembly (required)
+    -r|--host_learn          Host training set (optional)
+    -c|--conta_learn         Contaminant training set (optional) if missing and sliding window parameters are given, the sliding windows composition will be compared to the whole genome composition to contrast potential HGTs (prokaryotes and simple eukaryotes only)
+    -t|--win_step            Step of the sliding windows analysis to locate the contaminant (optional) default: 500bp or 100bp
+    -w|--win_size            Length of the sliding window to locate the contaminant (optional) default: 5000bp 
+    -W|--outputdir           path to outputdir directory
+    -d|--dist                Divergence metric used to compare profiles: (KL), JSD or Eucl
+    -m|--manual_threshold    You will be asked to manually set the thresholds
+    -h|--help                This help
+
 ```
+
+
+
+
+
+Preprocess the original assembly/raw reads in order to filter out entries, reduce computational time and increase signal
+-----------------------------------------------------------------------------------------------------------------------
+
+Filter short sequences or highly conserved repeats.
+
+* Reads an assembly or long sequencing reads multi-fasta file
+* Output filtered dataset
+
+
+```bash
+phylopreprocess.py [-h] -i INPUTFASTA [-p PERCENTILE] [-m MIN_READSIZE] [-s SAMPLING] [-r] [-o OUTPUTFASTA]
+```
+
+
+Parameters:
+```
+  -h, --help       show this help message and exit
+  -i INPUTFASTA
+  -p PERCENTILE    remove read of size not in Xth percentile
+  -m MIN_READSIZE  remove reads shorter than the provided minimal size
+  -s SAMPLING      percentage of read to sample
+  -r               the order of the reads are randomized
+  -o OUTPUTFASTA
+
+```
+
+
 
 
 Install
@@ -129,7 +245,7 @@ PhyloOligo softwares need python 3.4 or newer and several R and python packages.
 
 If python or R are not installed on your system:
 ```Bash
-apt-get install python3-dev python3-setuptools r-base
+apt-get install python3-dev python3-setuptools r-base git emboss samtools
 ```
 
 * Clone/download the git repository.
@@ -157,7 +273,7 @@ cd PhylOligo
 pip3 install . --user
 ```
 
-Or to install in locally in a folder of your choice:
+Or to install it locally in a folder of your choice:
 ```Bash
 pip3 install . --prefix /my/local/folder
 ```
