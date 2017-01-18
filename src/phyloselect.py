@@ -1,38 +1,17 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """ evaluate Phyloligo results
 
 K-medoids by :
     clustering Timo Erkkilä <timo.erkkila@gmail.com>
     Antti Lehmussola <antti.lehmussola@gmail.com>
     License: BSD 3 clause
-    
+
 """
-import os, sys, argparse
-
 import matplotlib
-if "--noX" in sys.argv:
-    matplotlib.use("agg") 
-#else:
-#    matplotlib.use("TkAgg")
+matplotlib.use("Agg")
 
-# if problem with either interactive visualization or noX option, the backend support may be at fault
-# try the following:
-# """
-# import matplotlib
-# print(matplotlib.get_backend())
-# import matplotlib.pyplot as plt
-# plt.plot([1, 2, 3, 4, 5])
-# plt.show()
-# """
-# if no plot is display, you may have a configuration problem in your matplotlib
-# look for backend problem involving the printed backend name
-# by default matplotlib should used TkAgg or Qt4Agg if PyQt4/PySide installed
-#
-# if you have a plot and the interactive mode doesn't work, please contact use for debugging
-#
-
-import matplotlib.pyplot as plt
-    
+import os, sys, argparse
 import tempfile, time
 
 from Bio import SeqIO
@@ -46,6 +25,9 @@ from sklearn.base import BaseEstimator, ClusterMixin, TransformerMixin
 from sklearn.metrics.pairwise import PAIRWISE_DISTANCE_FUNCTIONS
 from sklearn.utils import check_array, check_random_state
 from sklearn.utils.validation import check_is_fitted
+
+
+import matplotlib.pyplot as plt
 
 plot_kwds = {'alpha' : 0.3, 's' : 30, 'linewidths':0}
 
@@ -332,9 +314,9 @@ def get_cmd():
     parser.add_argument("-i", action="store", dest="distmat", required=True, 
                         help="The input matrix file")
     parser.add_argument("-t", action="store_true", dest="performtsne", default=False,
-                        help="Perform t-SNE for visualization and pre-clustering")
+                        help="Perform tsne for visualization and pre-clustering")
     parser.add_argument("-p", action="store", dest="perplexity", default=100, type=int, 
-                        help="Change the perplexity value of t-SNE [default:%(default)d]")
+                        help="Change the perplexity value")
     parser.add_argument("-m", action="store", dest="method", required=True, choices=["hdbscan", "kmedoids"], 
                         help="Method to use to compute cluster on transformed distance matrix")
     parser.add_argument("--minclustersize", action="store", dest="min_cluster_size", type=int, 
@@ -344,25 +326,22 @@ def get_cmd():
     parser.add_argument("-k", action="store", dest="nbk", type=int, 
                         help="Number of cluster")
     parser.add_argument("-f", action="store", dest="fastafile", 
-                        help="Path of the original fasta file used for the computation of the distance matrix, required to write classified reads")
+                        help="Path of the original fasta file used for the computation of the distance matrix")
     parser.add_argument("--interactive", action="store_true", dest="interactive", default=False,
                         help="Allow the user to run the script in an interactive mode and change "
                         "clustering parameter on the fly (require -t)")
     parser.add_argument("--large", action="store", choices=["memmap", "h5py"], dest="large", help="Used in combination with "
                         "joblib for large dataset", default=False)
     parser.add_argument("--noX", action="store_true", dest="noX", help="Instead of showing pictures, "
-                        "store them in png", default=False)
-    parser.add_argument("-o", action="store", dest="outputdir", required=True, help="The output directory to save results")
-    parser.add_argument("--color-palette", action="store", dest="palette_name", help="Matplotlib color palette name")
+                        "store them in png")
+    parser.add_argument("-o", action="store", dest="outputdir", required=True)
+    parser.add_argument("-q", "--infreq", action="store", dest="in_freq_file", 
+                        help="kmer frequencies input file[default:%(default)s]. If provided, the clustering is performed on the kmer frequency matrix instead of on the contig distance matrix.")
     params = parser.parse_args()
     
     if params.interactive and not params.performtsne:
-        print("Error, interactive mode (--interactive) requires t-SNE (-t)", file=sys.stderr)
+        print("Error, interactive mode (--interactive) requires tsne (-t)", file=sys.stderr)
         sys.exit(1)
-        
-    #if params.noX == False:
-        #plt.switch_backend('template')  
-        
     return params
 
 def read_distmat(path):
@@ -380,8 +359,24 @@ def read_distmat(path):
     """
     return np.loadtxt(path)
 
-def scaling_matrix_tsne(data, perplexity):
-    """ perform t-SNE on the initial distance matrix for visualization
+def read_freqmat(path):
+    """ read distance matrix
+    
+    Parameter:
+    ----------
+    path: string
+        path of the input matrix
+        
+    Return:
+    -------
+    data: np.ndarray
+        the ditance matrix
+    """
+    return np.loadtxt(path)
+
+
+def transform_matrix_tsne(data, perplexity):
+    """ perform tsne on the initial distance matrix for visualization
     
     Parameter:
     ----------
@@ -405,7 +400,7 @@ def find_clusters(data, method, kwargs):
     Parameters:
     -----------
     data: np.ndarray
-        bi-dimensional matrix (distance matrix scaled by t-sne)
+        bi-dimensional matrix (distance matrix transformed by t-sne)
     method: string
         name of the clustering method to use
     kwargst: dict
@@ -429,40 +424,13 @@ def find_clusters(data, method, kwargs):
         print("Error, unknown method {}".format(method), file=sys.stderr)
     return labels
     
-def plot_labels(data, labels, algorithm, output, palette_name="viridis"):
+def plot_labels(data, labels, algorithm, output):
     """ display resulting labels
     
     Parameters:
     -----------
     data: np.ndarray
-        bi-dimensional matrix (distance matrix scaled by t-sne)
-    labels: np.array
-        predicted classes of each matrix entry
-    algorithm: string
-        name of the clustering method used
-    output: string
-        where to save the output plot
-    """
-    #palette = sns.color_palette('deep', np.unique(labels).max() + 1)
-    palette = plt.get_cmap(palette_name)
-    color_palette = [palette(i) for i in range(0, palette.N, palette.N // (np.unique(labels).max()+1))]
-    colors = [color_palette[x-1] if x >= 0 else (0.0, 0.0, 0.0) for x in labels]
-    fig, ax = plt.subplots()
-    ax.scatter(data.T[0], data.T[1], c=colors, **plot_kwds)
-    frame = plt.gca()
-    frame.axes.get_xaxis().set_visible(False)
-    frame.axes.get_yaxis().set_visible(False)
-    ax.set_title('Clusters found by {}'.format(str(algorithm)), fontsize=24)
-    plt.savefig(output, dpi=300)
-    plt.close()
-
-def show_labels(data, labels, algorithm, noX, prefix="", dirout=None, palette_name="viridis", verbose=0):
-    """ display resulting labels
-    
-    Parameters:
-    -----------
-    data: np.ndarray
-        bi-dimensional matrix (distance matrix scaled by t-sne)
+        bi-dimensional matrix (distance matrix transformed by t-sne)
     labels: np.array
         predicted classes of each matrix entry
     algorithm: string
@@ -472,9 +440,33 @@ def show_labels(data, labels, algorithm, noX, prefix="", dirout=None, palette_na
     """
     #palette = sns.color_palette('deep', np.unique(labels).max() + 1)
     palette = plt.get_cmap("viridis")
-    palette = plt.get_cmap(palette_name)
-    color_palette = [palette(i) for i in range(0, palette.N, palette.N // (np.unique(labels).max()+1))]
-    colors = [color_palette[x-1] if x >= 0 else (0.0, 0.0, 0.0) for x in labels]
+    colors = [palette[x] if x >= 0 else (0.0, 0.0, 0.0) for x in labels]
+    fig, ax = plt.subplots()
+    ax.scatter(data.T[0], data.T[1], c=colors, **plot_kwds)
+    frame = plt.gca()
+    frame.axes.get_xaxis().set_visible(False)
+    frame.axes.get_yaxis().set_visible(False)
+    ax.set_title('Clusters found by {}'.format(str(algorithm)), fontsize=24)
+    plt.savefig(output, dpi=300)
+    plt.close()
+
+def show_labels(data, labels, algorithm, noX, prefix="", dirout=None, verbose=0):
+    """ display resulting labels
+    
+    Parameters:
+    -----------
+    data: np.ndarray
+        bi-dimensional matrix (distance matrix transformed by t-sne)
+    labels: np.array
+        predicted classes of each matrix entry
+    algorithm: string
+        name of the clustering method used
+    output: string
+        where to save the output plot
+    """
+    #palette = sns.color_palette('deep', np.unique(labels).max() + 1)
+    palette = plt.get_cmap("viridis")
+    colors = [palette[x] if x >= 0 else (0.0, 0.0, 0.0) for x in labels]
     fig, ax = plt.subplots()
     ax.scatter(data.T[0], data.T[1], c=colors, **plot_kwds)
     frame = plt.gca()
@@ -497,7 +489,7 @@ def show_labels(data, labels, algorithm, noX, prefix="", dirout=None, palette_na
         plt.savefig(pathout)
     else:
         if verbose:
-            print("Displaying current clustering with algorithm {}".format(algorithm))
+            print("Displaing current clustering with algorithm {}".format(algorithm))
         plt.show()
     plt.close()
 
@@ -540,7 +532,7 @@ def write_fastafile(labels_pred, fastafile, outputdir):
     all_classes = np.unique(labels_pred)
     for cl in all_classes:
         if cl == -1:
-            pathout = os.path.join(outputdir, "data_fasta_unclassified.fa".format(cl))
+            pathout = "/"
             indexes = np.where(labels_pred == cl)[0]
             records = get_fasta_record(set(list(indexes)), fastafile)
             with open(pathout, "w") as outf:
@@ -573,15 +565,12 @@ def clusterize(data, method, min_cluster_size=None, min_samples=None, nbk=None):
 
 def main():
     params = get_cmd()
-    print(params.noX)
-    #if params.noX:
-        #matplotlib.use("agg")
-        
+    
     if not os.path.isdir(params.outputdir):
         os.makedirs(params.outputdir)
     
-    # get matrix and scale the data to a bidimensional set of point with t-SBE
-    print("Reading matrix")
+    # get matrix and transform the data to a bidimensional set of point with tsne
+    print("Read matrix")
     if params.large != False:
         if params.large == "memmap":
             # if matrix was created using --large option read it as a memmap matrix
@@ -602,12 +591,12 @@ def main():
         matrix = read_distmat(params.distmat)
         
     if params.performtsne:
-        print("Scaling matrix with t-SNE")
-        data = scaling_matrix_tsne(matrix, params.perplexity)
+        print("Transform matrix")
+        data = transform_matrix_tsne(matrix, params.perplexity)
     else:
         data = matrix
     
-    # display original t-SNE:
+    # display original tsne:
     if params.interactive:
         fig, ax = plt.subplots()
         ax.scatter(data[:,0], data[:,1], **plot_kwds)
@@ -623,14 +612,14 @@ def main():
             plt.show()
         plt.close()
     
-    print("Clustering")
+    print("Clusterize")
     labels_pred = clusterize(matrix, params.method, min_cluster_size=params.min_cluster_size, min_samples=params.min_samples, nbk=params.nbk)
     
     # plot the different classes if reduction of dimentionality
     if params.performtsne and not params.interactive:
         pathout = os.path.join(params.outputdir, "data_tsne_reduc.png")
-        print("Save t-SNE clustering projection in {}".format(pathout))
-        plot_labels(data, labels_pred, params.method, pathout, params.palette_name)
+        print("Save tsne clustering projection in {}".format(pathout))
+        plot_labels(data, labels_pred, params.method, pathout)
     elif params.interactive:
         # loop until user is satisfied
         msg = "y"
@@ -643,7 +632,7 @@ def main():
             labels_pred = clusterize(matrix, method, 
                                      min_cluster_size=min_cl_size, min_samples=min_samples, nbk=nbk)
             show_labels(data, labels_pred, method, params.noX, prefix="clustering_{}".format(cnt), 
-                        dirout=params.outputdir, palette_name=params.palette_name, verbose=1)
+                        dirout=params.outputdir, verbose=1)
             cnt += 1
             print("perform an other run? [y/n]")
             msg = input("--> ")
