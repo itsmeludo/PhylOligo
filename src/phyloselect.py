@@ -10,7 +10,27 @@ K-medoids by :
 import os, sys, argparse
 
 import matplotlib
-matplotlib.use("agg") if "--noX" in sys.argv else matplotlib.use("Qt4Agg")
+if "--noX" in sys.argv:
+    matplotlib.use("agg") 
+#else:
+#    matplotlib.use("TkAgg")
+
+# if problem with either interactive visualization or noX option, the backend support may be at fault
+# try the following:
+# """
+# import matplotlib
+# print(matplotlib.get_backend())
+# import matplotlib.pyplot as plt
+# plt.plot([1, 2, 3, 4, 5])
+# plt.show()
+# """
+# if no plot is display, you may have a configuration problem in your matplotlib
+# look for backend problem involving the printed backend name
+# by default matplotlib should used TkAgg or Qt4Agg if PyQt4/PySide installed
+#
+# if you have a plot and the interactive mode doesn't work, please contact use for debugging
+#
+
 import matplotlib.pyplot as plt
     
 import tempfile, time
