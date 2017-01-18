@@ -37,6 +37,7 @@ import numpy as np
 import shlex, subprocess, pickle, shutil
 import h5py
 
+import Bio.Cluster
 from Bio import SeqIO
 from Bio.Seq import Seq
 from collections import Counter
@@ -213,6 +214,17 @@ def JSD(a, b):
         #d = d.T
     return d
 
+
+def KT(a, b):
+     """ Compute Kendall_Tau distance
+    """
+    return(1 - Bio.Cluster.distancematrix((a,b), dist="k")[1][0])
+
+
+def weighted_rank(a, b):
+    return 0
+
+
 def euclidean_distances_loc(output, X, s):
     distances = euclidean_distances(X, X[s])
     output[s] = distances.T
@@ -221,12 +233,25 @@ def JSD_loc(output, X, s):
     X, Y = check_pairwise_arrays(X, X[s])
     d = JSD(X, Y)
     output[s] = d
+    
+def KT_loc(output, X, s):
+    X, Y = check_pairwise_arrays(X, X[s])
+    d = KT(X, Y)
+    output[s] = d    
 
 def compute_JSD_unpack(params):
     """ unpack parameters to compute distances
     """
     i, j, freqi, freqj = params
     d = JSD(freqi, freqj)
+    return i, j, d
+
+
+def compute_KT_unpack(params):
+    """ unpack parameters to compute distances
+    """
+    i, j, freqi, freqj = params
+    d = KT(freqi, freqj)
     return i, j, d
 
 def compute_Eucl_unpack(params):
@@ -262,6 +287,21 @@ def JSD_h5py(output_dir, input, s):
     #distances[s] = d
     #hf.close()
     
+    
+ def KT_h5py(output_dir, input, s):
+    with h5py.File(input, "r") as hf:
+        X = hf.get("frequencies")
+        X, Y = check_pairwise_arrays(X, X[s])
+        dist = KT(X, Y)
+    
+    output = os.path.join(output_dir, "distance_{}_{}".format(s.start, s.stop))
+    with h5py.File(output, "w") as hf:
+        distances = hf.create_dataset("distances", dist.shape, dtype="float32")
+        distances[...] = dist[:]
+    #hf = h5py.File(output, "r+")
+    #distances = hf.get("distances")
+    #distances[s] = d
+    #hf.close()   
 
 def compute_distances_scoop(frequencies, chunksize, metric="Eucl"):
     """ compute pairwises distances
@@ -290,6 +330,13 @@ def compute_distances_scoop(frequencies, chunksize, metric="Eucl"):
         distances = np.zeros((len(frequencies), len(frequencies)), dtype=float)
         for freqchunk in make_freqchunk(frequencies, chunksize):
             res = futures.map(compute_JSD_unpack, freqchunk)
+            for i, j, d in res:
+                distances[i, j] = distances[j, i] = d
+                
+    elif metric == "KT":
+        distances = np.zeros((len(frequencies), len(frequencies)), dtype=float)
+        for freqchunk in make_freqchunk(frequencies, chunksize):
+            res = futures.map(compute_KT_unpack, freqchunk)
             for i, j, d in res:
                 distances[i, j] = distances[j, i] = d
                 
@@ -322,7 +369,7 @@ def compute_distances_joblib(frequencies, chunksize, metric="Eucl", n_jobs=1):
         distances = pairwise_distances(frequencies, metric=JSD, n_jobs=n_jobs)
     
     else:
-        print("Error, unknown method {}".format(metric), file=sys.stderr)
+        print("Error, unknown metric methodfor joblib: {}".format(metric), file=sys.stderr)
         sys.exit(1)
     return distances
 
@@ -368,6 +415,13 @@ def compute_distances_memmap(frequencies, freq_name, output, metric="Eucl", n_jo
         
     elif metric == "JSD":
         fd = delayed(JSD_loc)
+        Parallel(n_jobs=n_jobs, verbose=0)(fd(distances, frequencies, s) for s in gen_even_slices(frequencies.shape[0], n_jobs*SCALING))
+        
+        folder = os.path.dirname(freq_name)
+        remove_folder(folder)
+        
+    elif metric == "KT":
+        fd = delayed(KT_loc)
         Parallel(n_jobs=n_jobs, verbose=0)(fd(distances, frequencies, s) for s in gen_even_slices(frequencies.shape[0], n_jobs*SCALING))
         
         folder = os.path.dirname(freq_name)
@@ -439,6 +493,10 @@ def compute_distances_h5py(freq_name, dist_name, metric="Eucl", n_jobs=1):
         
     elif metric == "JSD":
         fd = delayed(JSD_h5py)
+        Parallel(n_jobs=n_jobs, verbose=0)(fd(dist_folder, freq_name, s) for s in gen_even_slices(size, n_jobs*SCALING)) # some scaling
+   
+    elif metric == "KT":
+        fd = delayed(KT_h5py)
         Parallel(n_jobs=n_jobs, verbose=0)(fd(dist_folder, freq_name, s) for s in gen_even_slices(size, n_jobs*SCALING)) # some scaling
             
     else:
@@ -926,8 +984,8 @@ def get_cmd():
                         #help="word lenght / kmer length / k [default:%(default)d]")
     parser.add_argument("-s", "--strand", action="store", dest="strand", default="both", choices=["both", "plus", "minus"],
                         help="strand used to compute microcomposition. [default:%(default)s]")
-    parser.add_argument("-d", "--distance", action="store", dest="dist", default="Eucl", choices=["Eucl", "JSD"], 
-                        help="how to compute distance between two signatures : Eucl : Euclidean[default:%(default)s], JSD : Jensen-Shannon divergence")
+    parser.add_argument("-d", "--distance", action="store", dest="dist", default="Eucl", choices=["Eucl", "JSD", "KT"], 
+                        help="how to compute distance between two signatures : Eucl : Euclidean[default:%(default)s], JSD : Jensen-Shannon divergence, KT: Kendall's tau")
     parser.add_argument("--freq-chunk-size", action="store", dest="freqchunksize", type=int, default=250,
                         help="the size of the chunk to use in scoop to compute frequencies")
     parser.add_argument("--dist-chunk-size", action="store", dest="distchunksize", type=int, default=250,
@@ -938,6 +996,8 @@ def get_cmd():
                         help="how many threads to use for windows microcomposition computation[default:%(default)d]")
     parser.add_argument("-o", "--out", action="store", dest="out_file", default="phyloligo.out", 
                         help="output file[default:%(default)s]")
+    parser.add_argument("-q", "--outfreq", action="store", dest="out_freq_file", default="phyloligo.freq", 
+                        help="kmer frequencies output file [default:infile_%(default)s]")
     parser.add_argument("-w", "--workdir", action="store", dest="workdir", default=".", help="working directory")
     parser.add_argument("-p", "--pattern", action="store", dest="pattern", default="1111", help="spaced-word pattern string, only containing 1s and 0s, i.e. '100101001', default='1111'")
     
@@ -971,8 +1031,13 @@ def main():
                                       params.dist, params.threads_max, params.freqchunksize, params.workdir)
         
     # save result in a numpy matrix
+    if (params.out_freq_file):
+        print("Writing frequency matrix")
+        np.savetxt(params.out_freq_file, frequencies, delimiter="\t")
+        
+    # save result in a numpy matrix
     if not (params.mthdrun == "joblib" and params.large != "None"):
-        print("Writing")
+        print("Writing distance matrix")
         np.savetxt(params.out_file, res, delimiter="\t")
         
     return 0
