@@ -7,11 +7,12 @@ K-medoids by :
     License: BSD 3 clause
     
 """
-import matplotlib
-#matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-
 import os, sys, argparse
+
+import matplotlib
+matplotlib.use("agg") if "--noX" in sys.argv else matplotlib.use("Qt4Agg")
+import matplotlib.pyplot as plt
+    
 import tempfile, time
 
 from Bio import SeqIO
@@ -330,7 +331,7 @@ def get_cmd():
     parser.add_argument("--large", action="store", choices=["memmap", "h5py"], dest="large", help="Used in combination with "
                         "joblib for large dataset", default=False)
     parser.add_argument("--noX", action="store_true", dest="noX", help="Instead of showing pictures, "
-                        "store them in png")
+                        "store them in png", default=False)
     parser.add_argument("-o", action="store", dest="outputdir", required=True, help="The output directory to save results")
     parser.add_argument("--color-palette", action="store", dest="palette_name", help="Matplotlib color palette name")
     params = parser.parse_args()
@@ -338,6 +339,10 @@ def get_cmd():
     if params.interactive and not params.performtsne:
         print("Error, interactive mode (--interactive) requires t-SNE (-t)", file=sys.stderr)
         sys.exit(1)
+        
+    #if params.noX == False:
+        #plt.switch_backend('template')  
+        
     return params
 
 def read_distmat(path):
@@ -548,7 +553,10 @@ def clusterize(data, method, min_cluster_size=None, min_samples=None, nbk=None):
 
 def main():
     params = get_cmd()
-    
+    print(params.noX)
+    #if params.noX:
+        #matplotlib.use("agg")
+        
     if not os.path.isdir(params.outputdir):
         os.makedirs(params.outputdir)
     
