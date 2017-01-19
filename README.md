@@ -219,18 +219,19 @@ Filter short sequences or highly conserved repeats.
 
 
 ```bash
-phylopreprocess.py [-h] -i INPUTFASTA [-p PERCENTILE] [-m MIN_READSIZE] [-s SAMPLING] [-r] [-o OUTPUTFASTA]
+ phylopreprocess.py [-h] -i INPUTFASTA [-p PERCENTILE] [-m MIN_SEQSIZE] [-s SAMPLING] [-r] [-o OUTPUTFASTA]
+
 ```
 
 
 Parameters:
 ```
-  -h, --help       show this help message and exit
+  -h, --help      show this help message and exit
   -i INPUTFASTA
-  -p PERCENTILE    remove read of size not in Xth percentile
-  -m MIN_READSIZE  remove reads shorter than the provided minimal size
-  -s SAMPLING      percentage of read to sample
-  -r               the order of the reads are randomized
+  -p PERCENTILE   remove sequences of size not in Xth percentile
+  -m MIN_SEQSIZE  remove sequences shorter than the provided minimal size
+  -s SAMPLING     percentage of read to sample
+  -r              the order of the sequences are randomized
   -o OUTPUTFASTA
 
 ```
