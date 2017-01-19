@@ -216,7 +216,7 @@ def JSD(a, b):
 
 
 def KT(a, b):
-     """ Compute Kendall_Tau distance
+    """ Compute Kendall_Tau distance
     """
     return(1 - Bio.Cluster.distancematrix((a,b), dist="k")[1][0])
 
@@ -288,7 +288,7 @@ def JSD_h5py(output_dir, input, s):
     #hf.close()
     
     
- def KT_h5py(output_dir, input, s):
+def KT_h5py(output_dir, input, s):
     with h5py.File(input, "r") as hf:
         X = hf.get("frequencies")
         X, Y = check_pairwise_arrays(X, X[s])
