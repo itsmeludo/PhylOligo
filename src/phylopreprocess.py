@@ -21,13 +21,13 @@ def get_cmd():
     #parser.add_argument("-l", action="store", dest="labels")
     
     parser.add_argument("-p", action="store", dest="percentile", type=float,
-                        help="remove read of size not in Xth percentile ")
-    parser.add_argument("-m", action="store", dest="min_readsize", type=int,
-                        help="remove reads shorter than the provided minimal size")
+                        help="remove sequences of size not in Xth percentile ")
+    parser.add_argument("-m", action="store", dest="min_seqsize", type=int,
+                        help="remove sequences shorter than the provided minimal size")
     parser.add_argument("-s", action="store", dest="sampling", type=float, default=0, 
                         help="percentage of read to sample")
     parser.add_argument("-r", action="store_true", dest="randorder", default=False,
-                        help="the order of the reads are randomized")
+                        help="the order of the sequences are randomized")
     
     parser.add_argument("-o", action="store", dest="outputfasta")
     params = parser.parse_args()
