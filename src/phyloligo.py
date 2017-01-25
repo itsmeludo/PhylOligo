@@ -224,6 +224,44 @@ def KT(a, b):
 def weighted_rank(a, b):
     return 0
 
+unpack_distances = {"JSD": JSD,
+                    "Eucl": Eucl,
+                    "KT": KT,
+                    }
+
+def compute_unpack(params):
+    """ unpack parameters to compute distances
+    """
+    i, j, freqi, freqj, distname = params
+    d = unpack_distances[distname](freqi, freqj)
+    return i, j, d
+
+#def compute_JSD_unpack(params):
+    #""" unpack parameters to compute distances
+    #"""
+    #i, j, freqi, freqj = params
+    #d = JSD(freqi, freqj)
+    #return i, j, d
+
+#def compute_KT_unpack(params):
+    #""" unpack parameters to compute distances
+    #"""
+    #i, j, freqi, freqj = params
+    #d = KT(freqi, freqj)
+    #return i, j, d
+
+#def compute_Eucl_unpack(params):
+    #""" unpack parameters to compute distances
+    #"""
+    #i, j, freqi, freqj = params
+    #d = Eucl(freqi, freqj)
+    #return i, j, d
+
+
+def distances_loc(output, X, s, metric):
+    """ quick wrapper around function call
+    """
+    loc_h5py[metric](output, X, s)
 
 def euclidean_distances_loc(output, X, s):
     distances = euclidean_distances(X, X[s])
@@ -237,29 +275,18 @@ def JSD_loc(output, X, s):
 def KT_loc(output, X, s):
     X, Y = check_pairwise_arrays(X, X[s])
     d = KT(X, Y)
-    output[s] = d    
+    output[s] = d   
+    
+loc_h5py = {"Eucl": euclidean_distances_loc,
+             "JSD": JSD_loc,
+             "KT": KT_loc}
 
-def compute_JSD_unpack(params):
-    """ unpack parameters to compute distances
+
+
+def distances_h5py(output_dir, input, s, metric):
+    """ quick wrapper around various distances
     """
-    i, j, freqi, freqj = params
-    d = JSD(freqi, freqj)
-    return i, j, d
-
-
-def compute_KT_unpack(params):
-    """ unpack parameters to compute distances
-    """
-    i, j, freqi, freqj = params
-    d = KT(freqi, freqj)
-    return i, j, d
-
-def compute_Eucl_unpack(params):
-    """ unpack parameters to compute distances
-    """
-    i, j, freqi, freqj = params
-    d = Eucl(freqi, freqj)
-    return i, j, d
+    dist_h5py[metric](output_dir, input, s)
 
 def euclidean_distances_h5py(output_dir, input, s):
     with h5py.File(input, "r") as hf:
@@ -287,7 +314,6 @@ def JSD_h5py(output_dir, input, s):
     #distances[s] = d
     #hf.close()
     
-    
 def KT_h5py(output_dir, input, s):
     with h5py.File(input, "r") as hf:
         X = hf.get("frequencies")
@@ -303,6 +329,10 @@ def KT_h5py(output_dir, input, s):
     #distances[s] = d
     #hf.close()   
 
+dist_h5py = {"Eucl": euclidean_distances_h5py,
+             "JSD": JSD_h5py,
+             "KT": KT_h5py}
+
 def compute_distances_scoop(frequencies, chunksize, metric="Eucl"):
     """ compute pairwises distances
     
@@ -311,7 +341,7 @@ def compute_distances_scoop(frequencies, chunksize, metric="Eucl"):
     frequencies: np.array
         a list of frequencies, each row corresponding to a sample each column to a "word"
     metric: string
-        distance method to use ('JSD', 'Eucl', 'KL')
+        distance method to use ('JSD', 'Eucl', 'KT')
     
     Return:
     -------
@@ -319,33 +349,42 @@ def compute_distances_scoop(frequencies, chunksize, metric="Eucl"):
         (n_samples, n_samples) distance matrix
     """
     #scoop.logger.info("Starting distance computation")
-    if metric == "Eucl":
-        distances = np.zeros((len(frequencies), len(frequencies)), dtype=float)
-        for freqchunk in make_freqchunk(frequencies, chunksize):
-            res = futures.map(compute_Eucl_unpack, freqchunk)
-            for i, j, d in res:
-                distances[i, j] = distances[j, i] = d
-                
-    elif metric == "JSD":
-        distances = np.zeros((len(frequencies), len(frequencies)), dtype=float)
-        for freqchunk in make_freqchunk(frequencies, chunksize):
-            res = futures.map(compute_JSD_unpack, freqchunk)
-            for i, j, d in res:
-                distances[i, j] = distances[j, i] = d
-                
-    elif metric == "KT":
-        distances = np.zeros((len(frequencies), len(frequencies)), dtype=float)
-        for freqchunk in make_freqchunk(frequencies, chunksize):
-            res = futures.map(compute_KT_unpack, freqchunk)
-            for i, j, d in res:
-                distances[i, j] = distances[j, i] = d
-                
-    else:
+    
+    if metric not in ["JSD", "Eucl", "KT"]:
+        # should already have been verified, but just in case ...
         print("Error, unknown method {}".format(metric), file=sys.stderr)
         sys.exit(1)
+        
+    distances = np.zeros((len(frequencies), len(frequencies)), dtype=float)
+    for freqchunk in make_freqchunk(frequencies, metric, chunksize):
+        res = futures.map(compute_unpack, freqchunk)
+        for i, j, d in res:
+            distances[i, j] = distances[j, i] = d
+            
+    #if metric == "Eucl":
+        #distances = np.zeros((len(frequencies), len(frequencies)), dtype=float)
+        #for freqchunk in make_freqchunk(frequencies, chunksize):
+            #res = futures.map(compute_Eucl_unpack, freqchunk)
+            #for i, j, d in res:
+                #distances[i, j] = distances[j, i] = d
+                
+    #elif metric == "JSD":
+        #distances = np.zeros((len(frequencies), len(frequencies)), dtype=float)
+        #for freqchunk in make_freqchunk(frequencies, chunksize):
+            #res = futures.map(compute_JSD_unpack, freqchunk)
+            #for i, j, d in res:
+                #distances[i, j] = distances[j, i] = d
+                
+    #elif metric == "KT":
+        #distances = np.zeros((len(frequencies), len(frequencies)), dtype=float)
+        #for freqchunk in make_freqchunk(frequencies, chunksize):
+            #res = futures.map(compute_KT_unpack, freqchunk)
+            #for i, j, d in res:
+                #distances[i, j] = distances[j, i] = d
+                
     return distances
 
-def compute_distances_joblib(frequencies, chunksize, metric="Eucl", n_jobs=1):
+def compute_distances_joblib(frequencies, metric="Eucl", n_jobs=1):
     """ compute pairwises distances
       
     Parameters
@@ -353,7 +392,7 @@ def compute_distances_joblib(frequencies, chunksize, metric="Eucl", n_jobs=1):
     frequencies: np.array
         a list of frequencies, each row corresponding to a sample each column to a "word"
     metric: string
-        distance method to use ('JSD', 'Eucl', 'KL')
+        distance method to use ('JSD', 'Eucl', 'KT')
     n_jobs: int
         number of parallel job to execute
     
@@ -362,15 +401,17 @@ def compute_distances_joblib(frequencies, chunksize, metric="Eucl", n_jobs=1):
     distances: np.array
         (n_samples, n_samples) distance matrix
     """
-
-    if metric == "Eucl":
-        distances = pairwise_distances(frequencies, metric=Eucl, n_jobs=n_jobs)
-    elif metric == "JSD":
-        distances = pairwise_distances(frequencies, metric=JSD, n_jobs=n_jobs)
+    call_dist = {"Eucl": Eucl, "JSD": JSD}
     
-    else:
+    if not callable(metric) and metric not in call_dist:
         print("Error, unknown metric methodfor joblib: {}".format(metric), file=sys.stderr)
         sys.exit(1)
+    
+    if callable(metric):
+        distances = pairwise_distances(frequencies, metric=metric, n_jobs=n_jobs)
+    else:
+        distances = pairwise_distances(frequencies, metric=call_dist[metric], n_jobs=n_jobs)
+    
     return distances
 
 def compute_distances_memmap(frequencies, freq_name, output, metric="Eucl", n_jobs=1):
@@ -390,46 +431,50 @@ def compute_distances_memmap(frequencies, freq_name, output, metric="Eucl", n_jo
     distances: np.array
         (n_samples, n_samples) distance matrix
     """
-    #scoop.logger.info("Starting distance computation")
-    #folder = tempfile.mkdtemp()
-    #dist_name = os.path.join(folder, output)
 
-    # Pre-allocate a writeable shared memory map as a container for the
-    # results of the parallel computation
+    # Pre-allocate a writeable shared memory map as a container for the results of the parallel computation
     distances = np.memmap(output, dtype=frequencies.dtype, shape=(frequencies.shape[0], frequencies.shape[0]), mode='w+')
     
     # close and reopen it for reference
-    #dump(distances, distname)
-    #distances = load(dist_name, mmap_mode = "r+")
     del distances
     distances = np.memmap(output, dtype=frequencies.dtype, shape=(frequencies.shape[0], frequencies.shape[0]), mode='r+')
 
-    if metric == "Eucl":
-        # execute parallel computation of euclidean distance
-        fd = delayed(euclidean_distances_loc)
-        Parallel(n_jobs=n_jobs, verbose=0)(fd(distances, frequencies, s) for s in gen_even_slices(frequencies.shape[0], n_jobs*SCALING))
-            
-        folder = os.path.dirname(freq_name)
-        remove_folder(folder)
-        #print(freq_name)
-        
-    elif metric == "JSD":
-        fd = delayed(JSD_loc)
-        Parallel(n_jobs=n_jobs, verbose=0)(fd(distances, frequencies, s) for s in gen_even_slices(frequencies.shape[0], n_jobs*SCALING))
-        
-        folder = os.path.dirname(freq_name)
-        remove_folder(folder)
-        
-    elif metric == "KT":
-        fd = delayed(KT_loc)
-        Parallel(n_jobs=n_jobs, verbose=0)(fd(distances, frequencies, s) for s in gen_even_slices(frequencies.shape[0], n_jobs*SCALING))
-        
-        folder = os.path.dirname(freq_name)
-        remove_folder(folder)
-            
-    else:
+    if metric not in ["Eucl", "JSD", "KT"]:
         print("Error, unknown method {}".format(metric), file=sys.stderr)
         sys.exit(1)
+        
+    fd = delayed(distances_loc)
+    Parallel(n_jobs=n_jobs, verbose=0)(fd(distances, frequencies, s, metric) for s in gen_even_slices(frequencies.shape[0], n_jobs*SCALING))
+        
+    folder = os.path.dirname(freq_name)
+    remove_folder(folder)
+    
+    #if metric == "Eucl":
+        ## execute parallel computation of euclidean distance
+        #fd = delayed(euclidean_distances_loc)
+        #Parallel(n_jobs=n_jobs, verbose=0)(fd(distances, frequencies, s) for s in gen_even_slices(frequencies.shape[0], n_jobs*SCALING))
+            
+        #folder = os.path.dirname(freq_name)
+        #remove_folder(folder)
+        ##print(freq_name)
+        
+    #elif metric == "JSD":
+        #fd = delayed(JSD_loc)
+        #Parallel(n_jobs=n_jobs, verbose=0)(fd(distances, frequencies, s) for s in gen_even_slices(frequencies.shape[0], n_jobs*SCALING))
+        
+        #folder = os.path.dirname(freq_name)
+        #remove_folder(folder)
+        
+    #elif metric == "KT":
+        #fd = delayed(KT_loc)
+        #Parallel(n_jobs=n_jobs, verbose=0)(fd(distances, frequencies, s) for s in gen_even_slices(frequencies.shape[0], n_jobs*SCALING))
+        
+        #folder = os.path.dirname(freq_name)
+        #remove_folder(folder)
+            
+    #else:
+        #print("Error, unknown method {}".format(metric), file=sys.stderr)
+        #sys.exit(1)
 
 def join_distance_results(dist_folder, dist_name, size, n_jobs):
     """ join the different distances computation into a single matrix
@@ -485,24 +530,27 @@ def compute_distances_h5py(freq_name, dist_name, metric="Eucl", n_jobs=1):
     dist_folder = os.path.join(folder, "distances")
     if not os.path.isdir(dist_folder):
         os.makedirs(dist_folder)
-    
-    if metric == "Eucl":
-        # execute parallel computation of euclidean distance
-        fd = delayed(euclidean_distances_h5py)
-        Parallel(n_jobs=n_jobs, verbose=0)(fd(dist_folder, freq_name, s) for s in gen_even_slices(size, n_jobs*SCALING)) # some scaling
         
-    elif metric == "JSD":
-        fd = delayed(JSD_h5py)
-        Parallel(n_jobs=n_jobs, verbose=0)(fd(dist_folder, freq_name, s) for s in gen_even_slices(size, n_jobs*SCALING)) # some scaling
-   
-    elif metric == "KT":
-        fd = delayed(KT_h5py)
-        Parallel(n_jobs=n_jobs, verbose=0)(fd(dist_folder, freq_name, s) for s in gen_even_slices(size, n_jobs*SCALING)) # some scaling
-            
-    else:
+    if metric not in ["Eucl", "JSD", "KT"]:
         print("Error, unknown method {}".format(metric), file=sys.stderr)
         sys.exit(1)
         
+    fd = delayed(distances_h5py)
+    Parallel(n_jobs=n_jobs, verbose=0)(fd(dist_folder, freq_name, s, metric) for s in gen_even_slices(size, n_jobs*SCALING)) # some scaling
+    
+    #if metric == "Eucl":
+        ## execute parallel computation of euclidean distance
+        #fd = delayed(euclidean_distances_h5py)
+        #Parallel(n_jobs=n_jobs, verbose=0)(fd(dist_folder, freq_name, s) for s in gen_even_slices(size, n_jobs*SCALING)) # some scaling
+        
+    #elif metric == "JSD":
+        #fd = delayed(JSD_h5py)
+        #Parallel(n_jobs=n_jobs, verbose=0)(fd(dist_folder, freq_name, s) for s in gen_even_slices(size, n_jobs*SCALING)) # some scaling
+   
+    #elif metric == "KT":
+        #fd = delayed(KT_h5py)
+        #Parallel(n_jobs=n_jobs, verbose=0)(fd(dist_folder, freq_name, s) for s in gen_even_slices(size, n_jobs*SCALING)) # some scaling
+           
     # join distance results
     join_distance_results(dist_folder, dist_name, size, n_jobs)
     # remove folder storing separated distances
@@ -520,7 +568,7 @@ def compute_distances(mthdrun, large, frequencies, freq_name, out_file, dist, th
             #res = compute_distances_h5py(freq_name, out_file, metric=dist, n_jobs=threads_max)
             compute_distances_h5py(freq_name, out_file, metric=dist, n_jobs=threads_max) 
         else:
-            res = compute_distances_joblib(frequencies, freqchunksize, metric=dist, n_jobs=threads_max)
+            res = compute_distances_joblib(frequencies, metric=dist, n_jobs=threads_max)
     elif mthdrun == "scoop":
         res = compute_distances_scoop(frequencies, freqchunksize, metric=dist)
     else:
@@ -529,7 +577,7 @@ def compute_distances(mthdrun, large, frequencies, freq_name, out_file, dist, th
 
 #### Compute frequencies
 
-def make_freqchunk(frequencies, chunksize):
+def make_freqchunk(frequencies, metric, chunksize):
     """ prepare frequencies to be parallelized
     """
     chunk = list()
@@ -537,7 +585,7 @@ def make_freqchunk(frequencies, chunksize):
         freqi = frequencies[i]
         for j in range(i, len(frequencies)):
             freqj = frequencies[j]
-            chunk.append((i, j, freqi, freqj))
+            chunk.append((i, j, freqi, freqj, metric))
             if len(chunk) == chunksize:
                 yield chunk
                 chunk = list()
