@@ -50,6 +50,7 @@ from sklearn.metrics.pairwise import euclidean_distances
 from sklearn.metrics.pairwise import pairwise_distances
 from sklearn.metrics.pairwise import check_pairwise_arrays
 from sklearn.utils import gen_even_slices
+from scipy.stats import spearmanr
 
 # TODO
 # to be tested and added as option
@@ -220,6 +221,18 @@ def KT(a, b):
     """
     return(1 - Bio.Cluster.distancematrix((a,b), dist="k")[1][0])
 
+def BC(a, b):
+    """ Compute Bray-Curtis distance
+    """
+    return(sklearn.metrics.pairwise.pairwise_distances(a,b, metric='braycurtis',n_jobs=1)  )
+
+
+def SC(a, b):
+    """ Compute Spearman correlation distance
+    """
+    return(1 - spearmanr(a,b).correlation)
+
+
 
 def weighted_rank(a, b):
     return 0
@@ -227,6 +240,8 @@ def weighted_rank(a, b):
 unpack_distances = {"JSD": JSD,
                     "Eucl": Eucl,
                     "KT": KT,
+                    "BC": BC,
+                    "SC": SC
                     }
 
 def compute_unpack(params):
@@ -277,9 +292,24 @@ def KT_loc(output, X, s):
     d = KT(X, Y)
     output[s] = d   
     
+def BC_loc(output, X, s):
+    X, Y = check_pairwise_arrays(X, X[s])
+    d = BC(X, Y)
+    output[s] = d      
+    
+def SC_loc(output, X, s):
+    X, Y = check_pairwise_arrays(X, X[s])
+    d = SC(X, Y)
+    output[s] = d     
+    
+    
+    
 loc_h5py = {"Eucl": euclidean_distances_loc,
              "JSD": JSD_loc,
-             "KT": KT_loc}
+             "KT": KT_loc,
+             "BC": BC_loc,
+             "SC": SC_loc
+           }
 
 
 
@@ -329,9 +359,39 @@ def KT_h5py(output_dir, input, s):
     #distances[s] = d
     #hf.close()   
 
+
+def BC_h5py(output_dir, input, s):
+    with h5py.File(input, "r") as hf:
+        X = hf.get("frequencies")
+        X, Y = check_pairwise_arrays(X, X[s])
+        dist = BC(X, Y)
+    
+    output = os.path.join(output_dir, "distance_{}_{}".format(s.start, s.stop))
+    with h5py.File(output, "w") as hf:
+        distances = hf.create_dataset("distances", dist.shape, dtype="float32")
+        distances[...] = dist[:]
+        
+        
+def SC_h5py(output_dir, input, s):
+    with h5py.File(input, "r") as hf:
+        X = hf.get("frequencies")
+        X, Y = check_pairwise_arrays(X, X[s])
+        dist = SC(X, Y)
+    
+    output = os.path.join(output_dir, "distance_{}_{}".format(s.start, s.stop))
+    with h5py.File(output, "w") as hf:
+        distances = hf.create_dataset("distances", dist.shape, dtype="float32")
+        distances[...] = dist[:]        
+
+
+
+
 dist_h5py = {"Eucl": euclidean_distances_h5py,
              "JSD": JSD_h5py,
-             "KT": KT_h5py}
+             "KT": KT_h5py,
+             "BC": BC_h5py,
+             "SC": SC_h5py
+            }
 
 def compute_distances_scoop(frequencies, chunksize, metric="Eucl"):
     """ compute pairwises distances
@@ -350,7 +410,7 @@ def compute_distances_scoop(frequencies, chunksize, metric="Eucl"):
     """
     #scoop.logger.info("Starting distance computation")
     
-    if metric not in ["JSD", "Eucl", "KT"]:
+    if metric not in ["JSD", "Eucl", "KT","BC","SC"]:
         # should already have been verified, but just in case ...
         print("Error, unknown method {}".format(metric), file=sys.stderr)
         sys.exit(1)
@@ -401,7 +461,7 @@ def compute_distances_joblib(frequencies, metric="Eucl", n_jobs=1):
     distances: np.array
         (n_samples, n_samples) distance matrix
     """
-    call_dist = {"Eucl": Eucl, "JSD": JSD}
+    call_dist = {"Eucl": Eucl, "JSD": JSD, "KT": KT, "BC": 'braycurtis', "SC": SC}
     
     if not callable(metric) and metric not in call_dist:
         print("Error, unknown metric methodfor joblib: {}".format(metric), file=sys.stderr)
@@ -439,7 +499,7 @@ def compute_distances_memmap(frequencies, freq_name, output, metric="Eucl", n_jo
     del distances
     distances = np.memmap(output, dtype=frequencies.dtype, shape=(frequencies.shape[0], frequencies.shape[0]), mode='r+')
 
-    if metric not in ["Eucl", "JSD", "KT"]:
+    if metric not in ["Eucl", "JSD", "KT","BC","SC"]:
         print("Error, unknown method {}".format(metric), file=sys.stderr)
         sys.exit(1)
         
@@ -531,7 +591,7 @@ def compute_distances_h5py(freq_name, dist_name, metric="Eucl", n_jobs=1):
     if not os.path.isdir(dist_folder):
         os.makedirs(dist_folder)
         
-    if metric not in ["Eucl", "JSD", "KT"]:
+    if metric not in ["Eucl", "JSD", "KT","BC","SC"]:
         print("Error, unknown method {}".format(metric), file=sys.stderr)
         sys.exit(1)
         
@@ -1032,8 +1092,8 @@ def get_cmd():
                         #help="word lenght / kmer length / k [default:%(default)d]")
     parser.add_argument("-s", "--strand", action="store", dest="strand", default="both", choices=["both", "plus", "minus"],
                         help="strand used to compute microcomposition. [default:%(default)s]")
-    parser.add_argument("-d", "--distance", action="store", dest="dist", default="Eucl", choices=["Eucl", "JSD", "KT"], 
-                        help="how to compute distance between two signatures : Eucl : Euclidean[default:%(default)s], JSD : Jensen-Shannon divergence, KT: Kendall's tau")
+    parser.add_argument("-d", "--distance", action="store", dest="dist", default="Eucl", choices=["Eucl", "JSD", "KT","BC","SC"], 
+                        help="how to compute distance between two signatures : Eucl : Euclidean[default:%(default)s], JSD : Jensen-Shannon divergence, KT: Kendall's tau, BC: Bray-Curtis, SC:Spearman Correlation")
     parser.add_argument("--freq-chunk-size", action="store", dest="freqchunksize", type=int, default=250,
                         help="the size of the chunk to use in scoop to compute frequencies")
     parser.add_argument("--dist-chunk-size", action="store", dest="distchunksize", type=int, default=250,
