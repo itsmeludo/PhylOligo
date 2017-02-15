@@ -323,6 +323,8 @@ def compute_distance_joblib(mth_dist, mcp, seq, pattern, strand , n_max_freq_in_
     freq = compute_frequency(seq, n_max_freq_in_windows, pattern, strand)
     if mth_dist == "JSD":
         return JSD(freq, mcp)
+    elif mth_dist == "KL":
+        return KL(freq, mcp)
     else:
         return Eucl(freq, mcp)
 
@@ -432,22 +434,22 @@ def sliding_windows_distances(genome, mcp_comparison, mth_dist="JSD", pattern="1
     t1_tot = time.time()
     for chunk_info, sequences in make_genome_chunk(genome, windows_size, windows_step, options, 50000):
         res = list()
-        if mth_dist == "JSD":
-            vec_dist = compute_distances("joblib", "None", mth_dist, mcp_comparison, 
-                                        sequences, pattern, options.strand, 
-                                        options.threads_max, options.n_max_freq_in_windows)
-            for i in range(vec_dist.shape[0]):
-                res.append(chunk_info[i]+[vec_dist[i]])
-        else:
-            #freq  = compute_frequencies("joblib", "None", sequences, pattern, 
-                                    #options.strand, options.threads_max, 
-                                    #options.n_max_freq_in_windows, options.workdir)
-            #t2 = time.time()
-            vec_dist = pairwise_distances(freq, mcp_comparison, n_jobs=options.threads_max)
-            #print(np.allclose(test_dist, vec_dist))
-            #print(vec_dist.shape)
-            for i in range(vec_dist.shape[0]):
-                res.append(chunk_info[i]+[vec_dist[i]])
+        #if mth_dist == "JSD":
+        vec_dist = compute_distances("joblib", "None", mth_dist, mcp_comparison, 
+                                    sequences, pattern, options.strand, 
+                                    options.threads_max, options.n_max_freq_in_windows)
+        for i in range(vec_dist.shape[0]):
+            res.append(chunk_info[i]+[vec_dist[i]])
+        #else:
+            ##freq  = compute_frequencies("joblib", "None", sequences, pattern, 
+                                    ##options.strand, options.threads_max, 
+                                    ##options.n_max_freq_in_windows, options.workdir)
+            ##t2 = time.time()
+            #vec_dist = pairwise_distances(freq, mcp_comparison, n_jobs=options.threads_max)
+            ##print(np.allclose(test_dist, vec_dist))
+            ##print(vec_dist.shape)
+            #for i in range(vec_dist.shape[0]):
+                #res.append(chunk_info[i]+[vec_dist[i]])
         yield res 
         #t3 = time.time()
         #print(cnt, t2-t1, t3-t2)
@@ -513,7 +515,7 @@ def get_cmd():
                     help="strand used to compute microcomposition. [default:%(default)s]")
     parser.add_argument("-u", "--cpu", action="store", dest="threads_max", type=int, default=4, 
                     help="how maany threads to use for windows microcomposition computation[default:%(default)d]")
-    parser.add_argument("-W", "--workdir", action="store", dest="workdir", default=".", help="working directory")
+    parser.add_argument("-W", "--workdir", action="store", dest="workdir", default="", help="working directory")
 
     options = parser.parse_args()
 

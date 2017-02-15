@@ -30,7 +30,7 @@ spec <- matrix(c(
         'conta_learn'    , 'c', 1, "character", "Contaminant training set (optional) if missing and sliding window parameters are given, the sliding windows composition will be compared to the whole genome composition to contrast potential HGTs (prokaryotes and simple eukaryotes only)",
         'win_step'       , 't', 2, "int", "Step of the sliding windows analysis to locate the contaminant (optional) default: 500bp or 100bp",
         'win_size'       , 'w', 2, "int", "Length of the sliding window to locate the contaminant (optional) default: 5000bp ",
-        'outputdir'      , 'W', 1, "character", "path to outputdir directory",
+        'outputdir'      , 'W', 1, "character", "path to outputdir directory, should end with '/'",
         'dist'           , 'd', 2, "character", "Divergence metric used to compare profiles: (KL), JSD or Eucl",
         'manual_threshold' , 'm', 0, "logical", "You will be asked to manually set the thresholds",
         'help'           , 'h', 0, "logical",   "This help"
@@ -50,7 +50,7 @@ if (!is.null(opt[["help"]]) || is.null(opt[["genome"]])) {
 if (!is.null(opt[["outputdir"]]) ) {
     working_dir = opt[["outputdir"]]
 }else{
-    working_dir = "."
+    working_dir = "./"
 }
 
 # cat(paste(getopt(spec, usage=T),"\n"));
