@@ -47,10 +47,15 @@ if (!is.null(opt[["help"]]) || is.null(opt[["genome"]])) {
 # print("parameters:")
 # print(paste(names(opt),opt[names(opt)]))
 
+if (!is.null(opt[["outputdir"]]) ) {
+    working_dir = opt[["outputdir"]]
+}else{
+    working_dir = "."
+}
 
 # cat(paste(getopt(spec, usage=T),"\n"));
 genome_fasta = opt[["genome"]]
-working_dir = opt[["outputdir"]]
+
 conta_sample_fasta = opt[["conta_learn"]]
 host_sample_fasta = ifelse(is.null(opt[["host_learn"]]), test <- "" , test <-opt[["host_learn"]])
 dist = ifelse(is.null(opt[["dist"]]), test <- dist , test <-opt[["dist"]])
@@ -63,13 +68,13 @@ data=list()
 if ( is.null(opt[["host_learn"]])) {
   cmd=paste("bash -lic \"ionice -c2 -n3 Kount.py -i ",genome_fasta ," -W ",working_dir," -w ",win_size," -t ",win_step," -c ",conta_sample_fasta," -d  ",dist," -n 0.5\"",sep="")
   print(cmd)
-#   system(cmd)
+  system(cmd)
   input_path=paste(working_dir, basename(genome_fasta),".mcp_hostwindows_vs_wholegenome_",dist,".dist",sep="")
   data[["host"]]=read.delim(file=input_path, header=F)
 }else{
   cmd=paste("bash -lic \"ionice -c2 -n3 Kount.py -i ",genome_fasta ," -W ",working_dir," -w ",win_size," -t ",win_step," -c ",conta_sample_fasta," -r ",host_sample_fasta," -d ",dist," -n 0.5\"",sep="")
   print(cmd)
-#   system(cmd)
+  system(cmd)
   input_path=paste(working_dir,basename(genome_fasta),".mcp_hostwindows_vs_host_",basename(host_sample_fasta),"_",dist,".dist",sep="")
   data[["host"]]=read.delim(file=input_path, header=F)
 }
