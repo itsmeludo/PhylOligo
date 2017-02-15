@@ -506,7 +506,7 @@ def get_cmd():
                     help="Sliding windows size (bp)")
     parser.add_argument("-t", "--windows_step", action="store", dest="windows_step", type=int, default=500, 
                     help="Sliding windows step size(bp)")
-    parser.add_argument("-d", "--distance", action="store", dest="dist", choices=["JSD", "Eucl"],
+    parser.add_argument("-d", "--distance", action="store", dest="dist", choices=["JSD", "Eucl","KL"],
                     default="JSD", help="distance method between two signatures: "
                     "Eucl : Euclidienne, JSD : Jensen-Shannon divergence [default:%(default)s]")
     parser.add_argument("-s", "--strand", action="store", default="both",  choices=["both", "plus", "minus"],
@@ -579,7 +579,7 @@ def main():
             
 
     else:
-        # one vector shape of ksize**4
+        # one vector shape of 4**ksize
         conta =  compute_whole_composition(options.conta, options.pattern, options.strand, nb_jobs=options.threads_max)
           
     
@@ -590,7 +590,7 @@ def main():
                 outf.write(str("\t".join(map(str,t)))+"\n")
 
     if options.conta:
-        output = os.path.join(options.workdir, base_genome+".mcp_hostwindows_vs_"+"conta_"+base_conta+"_"+options.dist+".dist")
+        output = os.path.join(options.workdir, base_genome+".mcp_hostwindows_vs_conta_"+base_conta+"_"+options.dist+".dist")
         with open(output, 'w') as outf:
             for res in sliding_windows_distances(options.genome, mcp_comparison=conta, mth_dist=options.dist, pattern=options.pattern,
                                              windows_size=options.windows_size, windows_step=options.windows_step, options=options):
