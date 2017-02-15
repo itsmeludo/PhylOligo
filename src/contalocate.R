@@ -117,8 +117,8 @@ if (! is.null(opt[["manual_threshold"]])) {
 }else{
 
   ### Humans are not worthy to set the thresholds, stats will guess it:
-
-
+  conta_threshold_name=paste(working_dir,basename(genome_fasta),"_vs_",basename(host_sample_fasta),"_conta_threshold.pdf",sep="")
+  pdf(file=conta_threshold_name)
   des_conta=density(data[["conta"]][which(!is.nan(data[["conta"]][,4]) ),4] )
   plot(des_conta,lwd=2)
 #   points(x= des_conta[["x"]][which.max(des_conta[["y"]])],y= des_conta[["y"]][which.max(des_conta[["y"]])])
@@ -128,9 +128,11 @@ if (! is.null(opt[["manual_threshold"]])) {
   conta_min=(which.max(des_conta[["y"]])-i)
   abline(v=des_conta[["x"]][conta_min],col="blue",lwd=2)
   threshold_conta=des_conta[["x"]][conta_min]
-  ask("Please inspect that the automatic threshold for the contaminant was set-up properly.")
+  dev.off()
+  ask(paste("Please inspect that the automatic threshold for the contaminant was set-up properly : ",conta_threshold_name)
 
-
+  host_threshold_name=paste(working_dir,basename(genome_fasta),"_vs_",basename(host_sample_fasta),"_host_threshold.pdf",sep="")
+  pdf(paste("",sep=""))
   des_host=density(data[["host"]][which(!is.nan(data[["host"]][,4]) ),4] )
   plot(des_host,lwd=2)
 #   points(x= des_host[["x"]][which.max(des_host[["y"]])],y= des_host[["y"]][which.max(des_host[["y"]])])
@@ -140,7 +142,8 @@ if (! is.null(opt[["manual_threshold"]])) {
   host_min=(which.max(des_host[["y"]])+i)
   abline(v=des_host[["x"]][host_min],col="blue",lwd=2)
   threshold_host=des_host[["x"]][host_min]
-  ask("Please inspect that the automatic threshold for the host was set-up properly.")
+  dev.off()
+  ask(paste("Please inspect that the automatic threshold for the host was set-up properly : ",host_threshold_name))
 }
 
 
