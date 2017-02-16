@@ -9,10 +9,11 @@ K-medoids by :
 
 """
 import matplotlib
-matplotlib.use("Agg")
-
-import os, sys, argparse
+import sys
+if "--noX" in sys.argv:
+    matplotlib.use("agg") 
 import tempfile, time
+import os, argparse
 
 from Bio import SeqIO
 
@@ -335,8 +336,6 @@ def get_cmd():
     parser.add_argument("--noX", action="store_true", dest="noX", help="Instead of showing pictures, "
                         "store them in png")
     parser.add_argument("-o", action="store", dest="outputdir", required=True)
-    parser.add_argument("-q", "--infreq", action="store", dest="in_freq_file", 
-                        help="kmer frequencies input file[default:%(default)s]. If provided, the clustering is performed on the kmer frequency matrix instead of on the contig distance matrix.")
     params = parser.parse_args()
     
     if params.interactive and not params.performtsne:
@@ -439,8 +438,9 @@ def plot_labels(data, labels, algorithm, output):
         where to save the output plot
     """
     #palette = sns.color_palette('deep', np.unique(labels).max() + 1)
+    norm = matplotlib.colors.Normalize(vmin=0, vmax=labels.max())
     palette = plt.get_cmap("viridis")
-    colors = [palette[x] if x >= 0 else (0.0, 0.0, 0.0) for x in labels]
+    colors = [palette(norm(x)) if x >= 0 else (0.0, 0.0, 0.0) for x in labels]
     fig, ax = plt.subplots()
     ax.scatter(data.T[0], data.T[1], c=colors, **plot_kwds)
     frame = plt.gca()
@@ -465,8 +465,9 @@ def show_labels(data, labels, algorithm, noX, prefix="", dirout=None, verbose=0)
         where to save the output plot
     """
     #palette = sns.color_palette('deep', np.unique(labels).max() + 1)
+    norm = matplotlib.colors.Normalize(vmin=0, vmax=labels.max())
     palette = plt.get_cmap("viridis")
-    colors = [palette[x] if x >= 0 else (0.0, 0.0, 0.0) for x in labels]
+    colors = [palette(norm(x)) if x >= 0 else (0.0, 0.0, 0.0) for x in labels]
     fig, ax = plt.subplots()
     ax.scatter(data.T[0], data.T[1], c=colors, **plot_kwds)
     frame = plt.gca()
