@@ -9,10 +9,10 @@
 """
 
 import os, sys, argparse
+import copy
 
 from Bio import SeqIO
 from Bio.Seq import Seq
-
 import numpy as np
 
 def get_cmd():
@@ -22,10 +22,14 @@ def get_cmd():
     
     parser.add_argument("-p", action="store", dest="percentile", type=float,
                         help="remove sequences of size not in Xth percentile ")
-    parser.add_argument("-m", action="store", dest="min_seqsize", type=int,
+    parser.add_argument("-m", action="store", dest="min_seqsize", type=int, default=0,
                         help="remove sequences shorter than the provided minimal size")
+    parser.add_argument("-c", action="store", dest="cumulated_seqsize", type=int, default=0,
+                        help="select sequences until their cumulated size reach this parameter. if -r is used, sequences are picked randomly.")
     parser.add_argument("-s", action="store", dest="sampling", type=float, default=0, 
-                        help="percentage of read to sample")
+                        help="percentage of reads to sample")
+    parser.add_argument("-u", action="store", dest="sample_size", type=float, default=0, 
+                        help="number of reads to sample")
     parser.add_argument("-r", action="store_true", dest="randorder", default=False,
                         help="the order of the sequences are randomized")
     
@@ -39,11 +43,11 @@ def main():
     data = list(SeqIO.parse(params.inputfasta, "fasta"))
     idx = np.arange(len(data))
     
-    if params.min_readsize!= None:
+    if params.min_seqsize!= 0:
         # remove short reads
         selected = list()
         for i in idx:
-            if len(data[i].seq) > params.min_readsize:
+            if len(data[i].seq) > params.min_seqsize:
                 selected.append(i)
         idx = selected[:]
         
@@ -55,11 +59,34 @@ def main():
                                (sizes < np.percentile(sizes, 100-threshold))).flatten()
 
         idx = selected[:]
+        
+    if params.cumulated_seqsize:
+        # remove reads above and below the Xth percentile from median size
+        local_reorder = copy.copy(idx)
+        if params.randorder:
+            np.random.shuffle(local_reorder)
+        
+        sizes = np.array([len(data[i].seq) for i in local_reorder])
+        cumsize = np.array([np.sum(sizes[0:j]) for j in idx])
+        if(cumsize[-1] >= int(params.cumulated_seqsize)):
+            thresh = next(x[0] for x in enumerate(cumsize) if x[1] > int(params.cumulated_seqsize))
+        else:
+            thresh=-1
+        selected = local_reorder[0:thresh]
+
+        idx = selected[:]
+    
+    
     
     if params.sampling != 0:
         # subsampling of read
         size = int((len(data) * params.sampling)/100.)
         selected = np.random.choice(idx, size, replace=False)
+        idx = selected[:]
+        
+    if params.sample_size != 0:
+        # subsampling of read
+        selected = np.random.choice(idx, int(params.sample_size), replace=False)
         idx = selected[:]
     
     if params.randorder:
