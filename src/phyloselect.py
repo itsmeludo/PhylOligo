@@ -438,9 +438,10 @@ def plot_labels(data, labels, algorithm, output):
     output: string
         where to save the output plot
     """
-    #palette = sns.color_palette('deep', np.unique(labels).max() + 1)
+    #palette = sns.color_palette('deep', np.unique(labels).max() + 1
+    norm = matplotlib.colors.Normalize(vmin=0, vmax=labels.max())
     palette = plt.get_cmap("viridis")
-    colors = [palette[x] if x >= 0 else (0.0, 0.0, 0.0) for x in labels]
+    colors = [palette(norm(x)) if x >= 0 else (0.0, 0.0, 0.0) for x in labels]
     fig, ax = plt.subplots()
     ax.scatter(data.T[0], data.T[1], c=colors, **plot_kwds)
     frame = plt.gca()
@@ -465,8 +466,9 @@ def show_labels(data, labels, algorithm, noX, prefix="", dirout=None, verbose=0)
         where to save the output plot
     """
     #palette = sns.color_palette('deep', np.unique(labels).max() + 1)
+    norm = matplotlib.colors.Normalize(vmin=0, vmax=labels.max())
     palette = plt.get_cmap("viridis")
-    colors = [palette[x] if x >= 0 else (0.0, 0.0, 0.0) for x in labels]
+    colors = [palette(norm(x)) if x >= 0 else (0.0, 0.0, 0.0) for x in labels]
     fig, ax = plt.subplots()
     ax.scatter(data.T[0], data.T[1], c=colors, **plot_kwds)
     frame = plt.gca()
