@@ -26,6 +26,8 @@ def get_cmd():
                         help="remove sequences shorter than the provided minimal size")
     parser.add_argument("-c", action="store", dest="cumulated_seqsize", type=int, default=0,
                         help="select sequences until their cumulated size reach this parameter. if -r is used, sequences are picked randomly.")
+    parser.add_argument("-g", action="store", dest="cumulated_percentsize", type=int, default=0,
+                        help="select sequences until their cumulated size reach a percentage of the sequences in the entry file as a whole. if -r is used, sequences are picked randomly.")
     parser.add_argument("-s", action="store", dest="sampling", type=float, default=0, 
                         help="percentage of reads to sample")
     parser.add_argument("-u", action="store", dest="sample_size", type=float, default=0, 
@@ -75,17 +77,38 @@ def main():
         selected = local_reorder[0:thresh]
 
         idx = selected[:]
-    
+        
+    if params.cumulated_percentsize:
+        # remove reads above and below the Xth percentile from median size
+        local_reorder = copy.copy(idx)
+        if params.randorder:
+            np.random.shuffle(local_reorder)
+        
+        sizes = np.array([len(data[i].seq) for i in local_reorder])
+        total_size=np.sum(sizes)
+        max_size_percent = int((total_size/100)*int(params.cumulated_percentsize))
+        cumsize = np.array([np.sum(sizes[0:j]) for j in idx])
+        if(cumsize[-1] >= max_size_percent):
+            thresh = next(x[0] for x in enumerate(cumsize) if x[1] > max_size_percent)
+        else:
+            thresh=-1
+        selected = local_reorder[0:thresh]
+
+        idx = selected[:]
     
     
     if params.sampling != 0:
         # subsampling of read
-        size = int((len(data) * params.sampling)/100.)
+        size = int((len(data) * params.sampling)/100)
+        if(size > len(data)):
+            size=len(data)
         selected = np.random.choice(idx, size, replace=False)
         idx = selected[:]
         
     if params.sample_size != 0:
         # subsampling of read
+        if(int(params.sample_size) > len(data)):
+            params.sample_size=len(data)
         selected = np.random.choice(idx, int(params.sample_size), replace=False)
         idx = selected[:]
     

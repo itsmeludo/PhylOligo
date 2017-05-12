@@ -1104,7 +1104,7 @@ def get_cmd():
                         help="how many threads to use for windows microcomposition computation[default:%(default)d]")
     parser.add_argument("-o", "--out", action="store", dest="out_file", default="phyloligo.out", 
                         help="output file[default:%(default)s]")
-    parser.add_argument("-q", "--outfreq", action="store", dest="out_freq_file", default="phyloligo.freq", 
+    parser.add_argument("-q", "--outfreq", action="store", dest="out_freq_file", 
                         help="kmer frequencies output file [default:infile_%(default)s]")
     parser.add_argument("-w", "--workdir", action="store", dest="workdir", default=".", help="working directory")
     parser.add_argument("-p", "--pattern", action="store", dest="pattern", default="1111", help="spaced-word pattern string, only containing 1s and 0s, i.e. '100101001', default='1111'")

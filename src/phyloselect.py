@@ -534,7 +534,7 @@ def write_fastafile(labels_pred, fastafile, outputdir):
     all_classes = np.unique(labels_pred)
     for cl in all_classes:
         if cl == -1:
-            pathout = "/"
+            pathout = os.path.join(outputdir, "data_fasta_unclust.fa".format(cl))
             indexes = np.where(labels_pred == cl)[0]
             records = get_fasta_record(set(list(indexes)), fastafile)
             with open(pathout, "w") as outf:
