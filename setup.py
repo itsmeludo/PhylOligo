@@ -35,6 +35,8 @@ setup(name='phyloligo',
                       'cython>=0.25.1',
                       'hdbscan>=0.8.2',
                       'matplotlib',
+                      'scoop2',
+                      'h5py',
                       ],
     zip_safe=False,
 )
