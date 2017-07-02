@@ -129,7 +129,7 @@ if (! is.null(opt[["manual_threshold"]])) {
   abline(v=des_conta[["x"]][conta_min],col="blue",lwd=2)
   threshold_conta=des_conta[["x"]][conta_min]
   dev.off()
-  ask(paste("Please inspect that the automatic threshold for the contaminant was set-up properly : ",conta_threshold_name)
+  ask(paste("Please inspect that the automatic threshold for the contaminant was set-up properly : ",conta_threshold_name))
 
   host_threshold_name=paste(working_dir,basename(genome_fasta),"_vs_",basename(host_sample_fasta),"_host_threshold.pdf",sep="")
   pdf(paste("",sep=""))
