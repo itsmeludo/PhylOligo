@@ -5,3 +5,5 @@ cython>=0.25.1
 hdbscan
 seaborn
 matplotlib
+scoop
+h5py
