@@ -107,9 +107,10 @@ def main():
         
     if params.sample_size != 0:
         # subsampling of read
+        nb_seq = int(params.sample_size)
         if(int(params.sample_size) > len(data)):
-            params.sample_size=len(data)
-        selected = np.random.choice(idx, int(params.sample_size), replace=False)
+            nb_seq=len(data)
+        selected = np.random.choice(idx, nb_seq, replace=False)
         idx = selected[:]
     
     if params.randorder:
