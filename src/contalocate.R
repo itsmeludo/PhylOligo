@@ -132,7 +132,7 @@ if (! is.null(opt[["manual_threshold"]])) {
   ask(paste("Please inspect that the automatic threshold for the contaminant was set-up properly : ",conta_threshold_name))
 
   host_threshold_name=paste(working_dir,basename(genome_fasta),"_vs_",basename(host_sample_fasta),"_host_threshold.pdf",sep="")
-  pdf(paste("",sep=""))
+  pdf(paste(host_threshold_name,sep=""))
   des_host=density(data[["host"]][which(!is.nan(data[["host"]][,4]) ),4] )
   plot(des_host,lwd=2)
 #   points(x= des_host[["x"]][which.max(des_host[["y"]])],y= des_host[["y"]][which.max(des_host[["y"]])])
