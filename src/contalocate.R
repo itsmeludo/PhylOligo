@@ -9,7 +9,7 @@
 
 
 ### dependencies:
-library(gtools)
+#library(gtools)
 library(getopt) #install.packages("getopt")   #maybe launch it as admin or root if you want it for other users too.
 ### Kount.py in the exec PATH or where this script is launched
 
@@ -91,10 +91,12 @@ if (! is.null(opt[["manual_threshold"]])) {
   repeat{
     plot(density(data[["conta"]][,4],na.rm=TRUE),xlim=c(0,5000),lwd=2)
     abline(v=threshold_conta,col="red")
-    new_threshold= ask("Give a different threshold value for the contaminant threshold. Give the same value to confirm it.\n")
+    #new_threshold= ask("Give a different threshold value for the contaminant threshold. Give the same value to confirm it.\n")
+    new_threshold=readline(con="stdin", 1, prompt = "Give a different threshold value for the contaminant threshold. Give the same value to confirm it")
+
     new_threshold <- as.numeric(new_threshold)
     
-    if(new_threshold==threshold_conta){
+    if(new_threshold == threshold_conta){
       break
     }
     threshold_conta=new_threshold
@@ -105,10 +107,11 @@ if (! is.null(opt[["manual_threshold"]])) {
   repeat{
     plot(density(data[["host"]][,4],na.rm=TRUE),xlim=c(0,5000),lwd=2)
     abline(v=threshold_host,col="red")
-    new_threshold= ask("Give a different threshold value for the host threshold. Give the same value to confirm it.\n")
+    #new_threshold= ask("Give a different threshold value for the host threshold. Give the same value to confirm it.\n")
+    new_threshold=readline(con="stdin", 1, prompt = "Give a different threshold value for the host threshold. Give the same value to confirm it.")
     new_threshold <- as.numeric(new_threshold)
     
-    if(new_threshold==threshold_host){
+    if(new_threshold == threshold_host){
       break
     }
     threshold_host=new_threshold

@@ -110,7 +110,7 @@ def main():
         nb_seq = int(params.sample_size)
         if(int(params.sample_size) > len(data)):
             nb_seq=len(data)
-        selected = np.random.choice(idx, nb_seq, replace=False)
+        selected = np.random.choice(idx, nb_seq, replace=True)
         idx = selected[:]
     
     if params.randorder:
