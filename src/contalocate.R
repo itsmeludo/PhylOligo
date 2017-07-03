@@ -89,10 +89,14 @@ if (! is.null(opt[["manual_threshold"]])) {
 
   threshold_conta=0
   repeat{
+    x11()
     plot(density(data[["conta"]][,4],na.rm=TRUE),xlim=c(0,5000),lwd=2)
     abline(v=threshold_conta,col="red")
+    Sys.sleep(10)
+    
     #new_threshold= ask("Give a different threshold value for the contaminant threshold. Give the same value to confirm it.\n")
-    new_threshold=readLines(con="stdin", 1, prompt = "Give a different threshold value for the contaminant threshold. Give the same value to confirm it")
+    print("Give a different threshold value for the host threshold. Give the same value to confirm it.")
+    new_threshold=readLines(con="stdin", 1)
 
     new_threshold <- as.numeric(new_threshold)
     
@@ -105,10 +109,13 @@ if (! is.null(opt[["manual_threshold"]])) {
 
   threshold_host=0
   repeat{
+    x11()
     plot(density(data[["host"]][,4],na.rm=TRUE),xlim=c(0,5000),lwd=2)
     abline(v=threshold_host,col="red")
+    Sys.sleep(10)
     #new_threshold= ask("Give a different threshold value for the host threshold. Give the same value to confirm it.\n")
-    new_threshold=readLines(con="stdin", 1, prompt = "Give a different threshold value for the host threshold. Give the same value to confirm it.")
+    print("Give a different threshold value for the host threshold. Give the same value to confirm it.")
+    new_threshold=readLines(con="stdin", 1)
     new_threshold <- as.numeric(new_threshold)
     
     if(new_threshold == threshold_host){
@@ -132,7 +139,7 @@ if (! is.null(opt[["manual_threshold"]])) {
   abline(v=des_conta[["x"]][conta_min],col="blue",lwd=2)
   threshold_conta=des_conta[["x"]][conta_min]
   dev.off()
-  ask(paste("Please inspect that the automatic threshold for the contaminant was set-up properly : ",conta_threshold_name))
+  print(paste("Please inspect that the automatic threshold for the contaminant was set-up properly : ",conta_threshold_name))
 
   host_threshold_name=paste(working_dir,basename(genome_fasta),"_vs_",basename(host_sample_fasta),"_host_threshold.pdf",sep="")
   pdf(paste(host_threshold_name,sep=""))
@@ -146,7 +153,7 @@ if (! is.null(opt[["manual_threshold"]])) {
   abline(v=des_host[["x"]][host_min],col="blue",lwd=2)
   threshold_host=des_host[["x"]][host_min]
   dev.off()
-  ask(paste("Please inspect that the automatic threshold for the host was set-up properly : ",host_threshold_name))
+  print(paste("Please inspect that the automatic threshold for the host was set-up properly : ",host_threshold_name))
 }
 
 
