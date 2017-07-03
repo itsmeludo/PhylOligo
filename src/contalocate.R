@@ -130,7 +130,7 @@ if (! is.null(opt[["manual_threshold"]])) {
   conta_threshold_name=paste(working_dir,basename(genome_fasta),"_vs_",basename(host_sample_fasta),"_conta_threshold.pdf",sep="")
   pdf(file=conta_threshold_name)
   des_conta=density(data[["conta"]][which(!is.nan(data[["conta"]][,4]) ),4] )
-  plot(des_conta,lwd=2)
+  plot(des_conta,lwd=2,main="")
 #   points(x= des_conta[["x"]][which.max(des_conta[["y"]])],y= des_conta[["y"]][which.max(des_conta[["y"]])])
   steep=des_conta[["y"]][seq(which.max(des_conta[["y"]]),0)]
   i=1
@@ -144,7 +144,7 @@ if (! is.null(opt[["manual_threshold"]])) {
   host_threshold_name=paste(working_dir,basename(genome_fasta),"_vs_",basename(host_sample_fasta),"_host_threshold.pdf",sep="")
   pdf(paste(host_threshold_name,sep=""))
   des_host=density(data[["host"]][which(!is.nan(data[["host"]][,4]) ),4] )
-  plot(des_host,lwd=2)
+  plot(des_host,lwd=2,main="")
 #   points(x= des_host[["x"]][which.max(des_host[["y"]])],y= des_host[["y"]][which.max(des_host[["y"]])])
   steep=des_host[["y"]][seq(which.max(des_host[["y"]]),length(des_host[["y"]]))]
   i=1
