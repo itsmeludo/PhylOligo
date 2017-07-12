@@ -9,7 +9,7 @@
 
 
 ### dependencies:
-library(gtools)
+#library(gtools)
 library(getopt) #install.packages("getopt")   #maybe launch it as admin or root if you want it for other users too.
 ### Kount.py in the exec PATH or where this script is launched
 
@@ -89,12 +89,18 @@ if (! is.null(opt[["manual_threshold"]])) {
 
   threshold_conta=0
   repeat{
+    x11()
     plot(density(data[["conta"]][,4],na.rm=TRUE),xlim=c(0,5000),lwd=2)
     abline(v=threshold_conta,col="red")
-    new_threshold= ask("Give a different threshold value for the contaminant threshold. Give the same value to confirm it.\n")
+    Sys.sleep(10)
+    
+    #new_threshold= ask("Give a different threshold value for the contaminant threshold. Give the same value to confirm it.\n")
+    print("Give a different threshold value for the host threshold. Give the same value to confirm it.")
+    new_threshold=readLines(con="stdin", 1)
+
     new_threshold <- as.numeric(new_threshold)
     
-    if(new_threshold==threshold_conta){
+    if(new_threshold == threshold_conta){
       break
     }
     threshold_conta=new_threshold
@@ -103,12 +109,16 @@ if (! is.null(opt[["manual_threshold"]])) {
 
   threshold_host=0
   repeat{
+    x11()
     plot(density(data[["host"]][,4],na.rm=TRUE),xlim=c(0,5000),lwd=2)
     abline(v=threshold_host,col="red")
-    new_threshold= ask("Give a different threshold value for the host threshold. Give the same value to confirm it.\n")
+    Sys.sleep(10)
+    #new_threshold= ask("Give a different threshold value for the host threshold. Give the same value to confirm it.\n")
+    print("Give a different threshold value for the host threshold. Give the same value to confirm it.")
+    new_threshold=readLines(con="stdin", 1)
     new_threshold <- as.numeric(new_threshold)
     
-    if(new_threshold==threshold_host){
+    if(new_threshold == threshold_host){
       break
     }
     threshold_host=new_threshold
@@ -120,7 +130,7 @@ if (! is.null(opt[["manual_threshold"]])) {
   conta_threshold_name=paste(working_dir,basename(genome_fasta),"_vs_",basename(host_sample_fasta),"_conta_threshold.pdf",sep="")
   pdf(file=conta_threshold_name)
   des_conta=density(data[["conta"]][which(!is.nan(data[["conta"]][,4]) ),4] )
-  plot(des_conta,lwd=2)
+  plot(des_conta,lwd=2,main="")
 #   points(x= des_conta[["x"]][which.max(des_conta[["y"]])],y= des_conta[["y"]][which.max(des_conta[["y"]])])
   steep=des_conta[["y"]][seq(which.max(des_conta[["y"]]),0)]
   i=1
@@ -129,12 +139,12 @@ if (! is.null(opt[["manual_threshold"]])) {
   abline(v=des_conta[["x"]][conta_min],col="blue",lwd=2)
   threshold_conta=des_conta[["x"]][conta_min]
   dev.off()
-  ask(paste("Please inspect that the automatic threshold for the contaminant was set-up properly : ",conta_threshold_name)
+  print(paste("Please inspect that the automatic threshold for the contaminant was set-up properly : ",conta_threshold_name))
 
   host_threshold_name=paste(working_dir,basename(genome_fasta),"_vs_",basename(host_sample_fasta),"_host_threshold.pdf",sep="")
-  pdf(paste("",sep=""))
+  pdf(paste(host_threshold_name,sep=""))
   des_host=density(data[["host"]][which(!is.nan(data[["host"]][,4]) ),4] )
-  plot(des_host,lwd=2)
+  plot(des_host,lwd=2,main="")
 #   points(x= des_host[["x"]][which.max(des_host[["y"]])],y= des_host[["y"]][which.max(des_host[["y"]])])
   steep=des_host[["y"]][seq(which.max(des_host[["y"]]),length(des_host[["y"]]))]
   i=1
@@ -143,7 +153,7 @@ if (! is.null(opt[["manual_threshold"]])) {
   abline(v=des_host[["x"]][host_min],col="blue",lwd=2)
   threshold_host=des_host[["x"]][host_min]
   dev.off()
-  ask(paste("Please inspect that the automatic threshold for the host was set-up properly : ",host_threshold_name))
+  print(paste("Please inspect that the automatic threshold for the host was set-up properly : ",host_threshold_name))
 }
 
 
