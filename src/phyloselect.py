@@ -440,7 +440,8 @@ def plot_labels(data, labels, algorithm, output):
     """
     #palette = sns.color_palette('deep', np.unique(labels).max() + 1
     norm = matplotlib.colors.Normalize(vmin=0, vmax=labels.max())
-    palette = plt.get_cmap("viridis")
+    palette = plt.get_cmap("gist_ncar")
+    #palette = plt.get_cmap("viridis")
     colors = [palette(norm(x)) if x >= 0 else (0.0, 0.0, 0.0) for x in labels]
     fig, ax = plt.subplots()
     ax.scatter(data.T[0], data.T[1], c=colors, **plot_kwds)
@@ -467,7 +468,8 @@ def show_labels(data, labels, algorithm, noX, prefix="", dirout=None, verbose=0)
     """
     #palette = sns.color_palette('deep', np.unique(labels).max() + 1)
     norm = matplotlib.colors.Normalize(vmin=0, vmax=labels.max())
-    palette = plt.get_cmap("viridis")
+    palette = plt.get_cmap("gist_ncar")
+    #palette = plt.get_cmap("viridis")
     colors = [palette(norm(x)) if x >= 0 else (0.0, 0.0, 0.0) for x in labels]
     fig, ax = plt.subplots()
     ax.scatter(data.T[0], data.T[1], c=colors, **plot_kwds)
