@@ -424,7 +424,8 @@ def find_clusters(data, method, kwargs):
         print("Error, unknown method {}".format(method), file=sys.stderr)
     return labels
     
-def plot_labels(data, labels, algorithm, output):
+
+def show_labels(data, labels, algorithm, noX, prefix="", dirout=None, verbose=0):
     """ display resulting labels
     
     Parameters:
@@ -438,18 +439,45 @@ def plot_labels(data, labels, algorithm, output):
     output: string
         where to save the output plot
     """
-    #palette = sns.color_palette('deep', np.unique(labels).max() + 1
-    norm = matplotlib.colors.Normalize(vmin=0, vmax=labels.max())
+    #palette = sns.color_palette('deep', np.unique(labels).max() + 1)
+    norm = matplotlib.colors.Normalize(vmin=0, vmax=labels.max()+1)
     palette = plt.get_cmap("gist_ncar")
     #palette = plt.get_cmap("viridis")
     colors = [palette(norm(x)) if x >= 0 else (0.0, 0.0, 0.0) for x in labels]
     fig, ax = plt.subplots()
     ax.scatter(data.T[0], data.T[1], c=colors, **plot_kwds)
+    xmin, xmax = ax.get_xlim()
+    ymin, ymax = ax.get_ylim()
+    unique_labels = np.unique(labels)
+    for cl in unique_labels:
+        if cl >= 0:
+            ax.scatter([xmin-10], [ymin-10], c=[palette(norm(cl))], label="cl{}".format(cl))
+    
     frame = plt.gca()
     frame.axes.get_xaxis().set_visible(False)
     frame.axes.get_yaxis().set_visible(False)
     ax.set_title('Clusters found by {}'.format(str(algorithm)), fontsize=24)
-    plt.savefig(output, dpi=300)
+    plt.xlim(xmin, xmax)
+    plt.ylim(ymin, ymax)
+    plt.legend()
+    if noX:
+        date = time.strftime("%Y%m%d")
+        curtime = time.strftime("%H%M%S")
+        if dirout != None:
+            pathout = tempfile.mktemp(
+                prefix="phyloselect_{}_{}_{}_".format(date, curtime, prefix), 
+                suffix=".png", dir=dirout)
+        else:
+            pathout = tempfile.mktemp(
+                prefix="phyloselect_{}_{}_{}_".format(date, curtime, prefix), 
+                suffix=".png")
+        if verbose :
+            print("saving file at {}".format(pathout))
+        plt.savefig(pathout)
+    else:
+        if verbose:
+            print("Displaing current clustering with algorithm {}".format(algorithm))
+        plt.show()
     plt.close()
 
 def show_labels(data, labels, algorithm, noX, prefix="", dirout=None, verbose=0):
