@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
 
-          
+import os, sys
 from setuptools import setup, find_packages
+
 
 def readme():
     with open('README.md') as f:
         return f.read()
+
+script_dir = os.path.join("phylopackage", "bin")
+all_scripts = list()
+for binf in ["phyloligo.py", "phyloligo_comparemat.py", "phyloselect.py",
+             "Kount.py", "phylopreprocess.py", "phyloselect.R",
+             "contalocate.R"]: # add script names here
+    all_scripts.append(os.path.join(script_dir, binf))
 
 setup(name='phyloligo',
     version='0.1',
@@ -23,15 +31,11 @@ setup(name='phyloligo',
     author='Ludovic Mallet, Tristan Bitard-Feildel',
     author_email='ludovic.mallet@anses.fr, tristan.bitard-feildel@impmc.upmc.fr',
     license='MIT',
-    scripts=['src/phyloligo.py', 'src/phyloselect.py',
-             'src/phyloligo_comparemat.py',
-             'src/Kount.py', 'src/phylopreprocess.py',
-             'src/phyloselect.R','src/contalocate.R',
-             ],
-    packages=find_packages(exclude=["src/"]),
+    scripts=all_scripts,
+    packages=find_packages(exclude=[script_dir,]),
     include_package_data=True,
     install_requires=['biopython>=1.68', 
-                      'scikit-learn0=0.19.1',
+                      'scikit-learn>=0.19.1',
                       'numpy>=1.11.2',
                       'cython>=0.25.1',
                       'hdbscan>=0.8.2',
