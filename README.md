@@ -12,7 +12,7 @@ Generate the all-by-all contig distance matrix
 
 
 ```bash
-phyloligo.py -d JSD -i genome.fasta -o genome.JSD.mat -u 64
+phyloligo.py -d JSD -i genome.fasta -o genome.JSD.mat -c 64
 ```
 Parameters:
 ```
