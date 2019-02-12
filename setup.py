@@ -16,13 +16,13 @@ for binf in ["phyloligo.py", "phyloligo_comparemat.py", "phyloselect.py",
     all_scripts.append(os.path.join(script_dir, binf))
 
 setup(name='phyloligo',
-    version='0.1',
+    version='0.9_3693ac8',
     description='clustering of sequence reads based on oligonucleotide composition',
     long_description=readme(),
 
     classifiers=[
         'Development Status :: 3 - Alpha',
-        'License :: OSI Approved :: MIT License',
+        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
         'Programming Language :: Python :: 3',
         'Topic :: Text Processing :: Linguistic',
         ],
@@ -30,7 +30,7 @@ setup(name='phyloligo',
     url='https://github.com/itsmeludo/PhylOligo/',
     author='Ludovic Mallet, Tristan Bitard-Feildel',
     author_email='ludovic.mallet@anses.fr, tristan.bitard-feildel@impmc.upmc.fr',
-    license='MIT',
+    license='GPLv3',
     scripts=all_scripts,
     packages=find_packages(exclude=[script_dir,]),
     include_package_data=True,
@@ -43,5 +43,14 @@ setup(name='phyloligo',
                       'scoop',
                       'h5py',
                       ],
+     data_files=[
+                ('data/references', [
+                        'references/M.oryzae_TH12_Eucl_ref.mat.xz',
+                        'references/M.oryzae_TH12_JSD_ref.mat.xz',
+                          ]),
+                ('doc', ['doc/PhylOligo_doc.pdf']),
+                ('benchmark', ['doc/Benchmark.tgz']),
+		],
+
     zip_safe=False,
 )
