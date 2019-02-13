@@ -16,7 +16,7 @@ for binf in ["phyloligo.py", "phyloligo_comparemat.py", "phyloselect.py",
     all_scripts.append(os.path.join(script_dir, binf))
 
 setup(name='phyloligo',
-    version='0.9_3693ac8',
+    version='v1.0',
     description='clustering of sequence reads based on oligonucleotide composition',
     long_description=readme(),
 
@@ -45,8 +45,8 @@ setup(name='phyloligo',
                       ],
      data_files=[
                 ('data/references', [
-                        'references/M.oryzae_TH12_Eucl_ref.mat.xz',
-                        'references/M.oryzae_TH12_JSD_ref.mat.xz',
+                        'data/references/M.oryzae_TH12_Eucl_ref.mat.xz',
+                        'data/references/M.oryzae_TH12_JSD_ref.mat.xz',
                           ]),
                 ('doc', ['doc/PhylOligo_doc.pdf']),
                 ('benchmark', ['doc/Benchmark.tgz']),
