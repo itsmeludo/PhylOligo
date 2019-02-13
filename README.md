@@ -19,6 +19,37 @@ conda install phyloligo -c itsmeludo
 
 
 
+(Optional) Preprocess the original assembly/raw reads in order to filter out entries, reduce computational time and increase signal
+-----------------------------------------------------------------------------------------------------------------------
+
+Filter short sequences or highly conserved repeats.
+
+* Reads an assembly or long sequencing reads multi-fasta file
+* Output filtered dataset
+
+
+```bash
+ phylopreprocess.py [-h] -i INPUTFASTA [-p PERCENTILE] [-m MIN_SEQSIZE] [-s SAMPLING] [-r] [-o OUTPUTFASTA]
+
+```
+
+
+Parameters:
+```
+  -h, --help      show this help message and exit
+  -i INPUTFASTA
+  -p PERCENTILE   remove sequences of size not in Xth percentile
+  -m MIN_SEQSIZE  remove sequences shorter than the provided minimal size
+  -s SAMPLING     percentage of read to sample
+  -r              the order of the sequences are randomized
+  -o OUTPUTFASTA
+
+```
+
+
+
+
+
 Generate the all-by-all contig distance matrix
 ----------------------------------------------
 
@@ -34,7 +65,7 @@ Parameters:
 ```
   -h, --help            show this help message and exit
   -i GENOME, --assembly GENOME
-                        multifasta of the genome assembly
+                        multifasta of the genome assembly or the set from the preprocess step.
   -k PATTERN, --lgMot PATTERN
                         word lenght / kmer length / k [default:4]. This option
                         is an alias for --pattern (see -p). If the type of the
@@ -221,36 +252,6 @@ Parameters:
 
 ```
 
-
-
-
-
-Preprocess the original assembly/raw reads in order to filter out entries, reduce computational time and increase signal
------------------------------------------------------------------------------------------------------------------------
-
-Filter short sequences or highly conserved repeats.
-
-* Reads an assembly or long sequencing reads multi-fasta file
-* Output filtered dataset
-
-
-```bash
- phylopreprocess.py [-h] -i INPUTFASTA [-p PERCENTILE] [-m MIN_SEQSIZE] [-s SAMPLING] [-r] [-o OUTPUTFASTA]
-
-```
-
-
-Parameters:
-```
-  -h, --help      show this help message and exit
-  -i INPUTFASTA
-  -p PERCENTILE   remove sequences of size not in Xth percentile
-  -m MIN_SEQSIZE  remove sequences shorter than the provided minimal size
-  -s SAMPLING     percentage of read to sample
-  -r              the order of the sequences are randomized
-  -o OUTPUTFASTA
-
-```
 
 
 
