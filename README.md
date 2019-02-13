@@ -29,19 +29,26 @@ Filter short sequences or highly conserved repeats.
 
 
 ```bash
- phylopreprocess.py [-h] -i INPUTFASTA [-p PERCENTILE] [-m MIN_SEQSIZE] [-s SAMPLING] [-r] [-o OUTPUTFASTA]
+phylopreprocess.py [-h] -i INPUTFASTA [-p PERCENTILE] [-m MIN_SEQSIZE]
+                          [-c CUMULATED_SEQSIZE] [-g CUMULATED_PERCENTSIZE]
+                          [-s SAMPLING] [-u SAMPLE_SIZE] [-r] [-o OUTPUTFASTA]
 
-```
-
-
-Parameters:
-```
-  -h, --help      show this help message and exit
+optional arguments:
+  -h, --help            show this help message and exit
   -i INPUTFASTA
-  -p PERCENTILE   remove sequences of size not in Xth percentile
-  -m MIN_SEQSIZE  remove sequences shorter than the provided minimal size
-  -s SAMPLING     percentage of read to sample
-  -r              the order of the sequences are randomized
+  -p PERCENTILE         remove sequences of size not in Xth percentile
+  -m MIN_SEQSIZE        remove sequences shorter than the provided minimal
+                        size
+  -c CUMULATED_SEQSIZE  select sequences until their cumulated size reach this
+                        parameter. if -r is used, sequences are picked
+                        randomly.
+  -g CUMULATED_PERCENTSIZE
+                        select sequences until their cumulated size reach a
+                        percentage of the sequences in the entry file as a
+                        whole. if -r is used, sequences are picked randomly.
+  -s SAMPLING           percentage of reads to sample
+  -u SAMPLE_SIZE        number of reads to sample
+  -r                    the order of the sequences are randomized
   -o OUTPUTFASTA
 
 ```
@@ -61,25 +68,29 @@ Generate the all-by-all contig distance matrix
 ```bash
 phyloligo.py -d JSD -i genome.fasta -o genome.JSD.mat -c 64
 ```
+
 Parameters:
 ```
+phyloligo.py [-h] -i GENOME [-k PATTERN] [-s {both,plus,minus}]
+                    [-d {Eucl,JSD,KT,BC,SC}] [--freq-chunk-size FREQCHUNKSIZE]
+                    [--dist-chunk-size DISTCHUNKSIZE] --method {scoop,joblib}
+                    [--large {None,memmap,h5py}] [-c THREADS_MAX]
+                    [-o OUT_FILE] [-q OUT_FREQ_FILE] [-w WORKDIR] [-p PATTERN]
+
+optional arguments:
   -h, --help            show this help message and exit
   -i GENOME, --assembly GENOME
-                        multifasta of the genome assembly or the set from the preprocess step.
+                        multifasta of the genome assembly
   -k PATTERN, --lgMot PATTERN
-                        word lenght / kmer length / k [default:4]. This option
-                        is an alias for --pattern (see -p). If the type of the
-                        parameter is an integer, it will be interpreted as the
-                        lenght of the kmer to use. If the type of the
-                        parameter is a string, it will be interpreted as a
-                        spaced-pattern.
+                        word lenght / kmer length / k [default:4]
   -s {both,plus,minus}, --strand {both,plus,minus}
                         strand used to compute microcomposition.
                         [default:both]
-  -d {Eucl,JSD}, --distance {Eucl,JSD}
+  -d {Eucl,JSD,KT,BC,SC}, --distance {Eucl,JSD,KT,BC,SC}
                         how to compute distance between two signatures : Eucl
                         : Euclidean[default:Eucl], JSD : Jensen-Shannon
-                        divergence
+                        divergence, KT: Kendall's tau, BC: Bray-Curtis,
+                        SC:Spearman Correlation
   --freq-chunk-size FREQCHUNKSIZE
                         the size of the chunk to use in scoop to compute
                         frequencies
@@ -95,11 +106,13 @@ Parameters:
                         computation[default:4]
   -o OUT_FILE, --out OUT_FILE
                         output file[default:phyloligo.out]
+  -q OUT_FREQ_FILE, --outfreq OUT_FREQ_FILE
+                        kmer frequencies output file [default:infile_None]
   -w WORKDIR, --workdir WORKDIR
                         working directory
   -p PATTERN, --pattern PATTERN
                         spaced-word pattern string, only containing 1s and 0s,
-                        i.e. '100101001', default='1111'. See -k / --lgMot.
+                        i.e. '100101001', default='1111'
 
 ```
 
@@ -189,6 +202,13 @@ phyloselect.py -i genome.JSD.mat -t -m hdbscan --noX -o genome_conta
 ```
 Parameters:
 ```
+phyloselect.py [-h] -i DISTMAT [-t] [-p PERPLEXITY] -m
+                      {hdbscan,kmedoids} [--minclustersize MIN_CLUSTER_SIZE]
+                      [--minsamples MIN_SAMPLES] [-k NBK] [-f FASTAFILE]
+                      [--interactive] [--large {memmap,h5py}] [--noX] -o
+                      OUTPUTDIR [-q IN_FREQ_FILE]
+
+optional arguments:
   -h, --help            show this help message and exit
   -i DISTMAT            The input matrix file
   -t                    Perform tsne for visualization and pre-clustering
@@ -210,6 +230,11 @@ Parameters:
                         Used in combination with joblib for large dataset
   --noX                 Instead of showing pictures, store them in png
   -o OUTPUTDIR
+  -q IN_FREQ_FILE, --infreq IN_FREQ_FILE
+                        kmer frequencies input file[default:None]. If
+                        provided, the clustering is performed on the kmer
+                        frequency matrix instead of on the contig distance
+                        matrix.
 
 ```
 
