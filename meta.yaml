@@ -3,12 +3,12 @@ package:
   version: v1.0
 
 source:
-  git_rev: 875c860
+  git_rev: 9756d8f
   git_url: https://github.com/itsmeludo/PhylOligo.git
 
 build:
   number: 1
-  string: 875c860
+  string: 9756d8f
 
 requirements:
   host:
