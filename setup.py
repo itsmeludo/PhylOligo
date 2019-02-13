@@ -49,7 +49,7 @@ setup(name='phyloligo',
                         'data/references/M.oryzae_TH12_JSD_ref.mat.xz',
                           ]),
                 ('doc', ['doc/PhylOligo_doc.pdf']),
-                ('benchmark', ['doc/Benchmark.tgz']),
+                ('benchmark', ['benchmark/Benchmark.tgz']),
 		],
 
     zip_safe=False,
