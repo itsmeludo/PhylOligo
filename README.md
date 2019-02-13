@@ -3,6 +3,22 @@ Bioinformatics / Genomics
 Explore oligonucleotide composition similarity between assembly contigs or scaffolds to detect contaminant DNA.
 
 
+New install with conda:
+-----------------------
+
+```Bash
+conda install phyloligo -c itsmeludo
+```
+
+You might want to install it in an environnement:
+```bash
+conda create -n phyloligo
+conda activate phyloligo
+conda install phyloligo -c itsmeludo
+```
+
+
+
 Generate the all-by-all contig distance matrix
 ----------------------------------------------
 
@@ -242,7 +258,24 @@ Parameters:
 Install
 -------
 
-PhyloOligo softwares need python 3.4 or newer and several R and python packages.
+A new install from conda is available!
+ check it out:
+
+```Bash
+conda install phyloligo -c itsmeludo
+```
+
+
+You might want to install it in an environnement:
+```bash
+conda create -n phyloligo
+conda activate phyloligo
+conda install phyloligo -c itsmeludo
+```
+
+Legacy install procedures as follow ;)
+
+PhylOligo softwares need python 3.4 or newer and several R and python packages.
 
 If python or R are not installed on your system:
 ```Bash
