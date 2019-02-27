@@ -19,7 +19,6 @@ setup(name='phyloligo',
     version='v1.0',
     description='clustering of sequence reads based on oligonucleotide composition',
     long_description=readme(),
-
     classifiers=[
         'Development Status :: 3 - Alpha',
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
@@ -50,7 +49,6 @@ setup(name='phyloligo',
                           ]),
                 ('doc', ['doc/PhylOligo_doc.pdf']),
                 ('benchmark', ['benchmark/Benchmark.tgz']),
-		],
-
+                ],
     zip_safe=False,
 )
